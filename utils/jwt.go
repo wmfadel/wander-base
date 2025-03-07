@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"errors"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -15,5 +16,37 @@ func GernerateToken(email string, userId int64) (string, error) {
 
 	secretKey := GetFromEnv("secretKey")
 	return token.SignedString([]byte(secretKey))
+}
+
+func VerifyToken(token string) (int64, error) {
+	parseedToken, err := jwt.Parse(
+		token,
+		func(t *jwt.Token) (interface{}, error) {
+			_, ok := t.Method.(*jwt.SigningMethodHMAC)
+			if !ok {
+				return nil, errors.New("wrong signing method")
+			}
+			return []byte(GetFromEnv("secretKey")), nil
+		},
+	)
+
+	if err != nil {
+		return 0, err
+	}
+
+	if !parseedToken.Valid {
+		return 0, errors.New("invalid token")
+	}
+
+	claims, ok := parseedToken.Claims.(jwt.MapClaims)
+
+	if !ok {
+		return 0, errors.New("invalid token")
+	}
+
+	// email, _ := claims["email"].(string)
+	userId := int64(claims["userId"].(float64))
+
+	return userId, nil
 
 }
