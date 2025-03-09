@@ -15,8 +15,8 @@ func RegisterRoutes(server *gin.Engine) {
 	guardedRoutes := server.Group("/", middlewares.Authenticate)
 
 	guardedRoutes.POST("/events", creatEvent)
-	guardedRoutes.PUT("/events/:id", updateEvent)
-	guardedRoutes.DELETE("/events/:id", deleteEvent)
+	guardedRoutes.PUT("/events/:id", middlewares.AuthorizeForEventEdits, updateEvent)
+	guardedRoutes.DELETE("/events/:id", middlewares.AuthorizeForEventEdits, deleteEvent)
 
 	guardedRoutes.POST("events/:id/register", registerForEvent)
 	guardedRoutes.DELETE("events/:id/register", cancelRegistrationEvent)
