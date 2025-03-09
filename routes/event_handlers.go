@@ -17,7 +17,7 @@ func getEvent(context *gin.Context) {
 	}
 	event, err := models.GetEventById(eventID)
 	if err != nil {
-		context.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("Failed to get event data: %v", err)})
+		context.JSON(http.StatusNotExtended, gin.H{"message": fmt.Sprintf("Failed to get event data: %v", err)})
 		return
 	}
 	context.JSON(http.StatusOK, event)

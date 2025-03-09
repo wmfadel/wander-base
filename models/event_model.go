@@ -1,6 +1,7 @@
 package models
 
 import (
+	"log"
 	"time"
 
 	"githuv.com/wmfadel/go_events/db"
@@ -17,45 +18,40 @@ type Event struct {
 
 func (e *Event) Save() error {
 	query := `INSERT INTO events(name, description, location, dateTime, user_id)
-	VALUES (?,?,?,?,?)`
+	VALUES ($1,$2,$3,$4,$5) RETURNING id`
 	stmt, err := db.DB.Prepare(query)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
-	result, err := stmt.Exec(e.Name, e.Description, e.Location, e.DateTime, e.UserID)
+
+	var eventId int64
+	err = stmt.QueryRow(e.Name, e.Description, e.Location, e.DateTime, e.UserID).Scan(&eventId)
 	if err != nil {
 		return err
 	}
-
-	id, err := result.LastInsertId()
-	e.ID = id
+	e.ID = eventId
+	log.Printf("Created event %v", e)
 	return err
 }
 
 func (e Event) Update() error {
 	query := `
 	UPDATE events
-	SET name = ?, description = ?, location = ?, dateTime = ?
-	WHERE id = ?
+	SET name = $1, description = $2, location = $3, dateTime = $4
+	WHERE id = $5
 	`
 	stmt, err := db.DB.Prepare(query)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
-	result, err := stmt.Exec(e.Name, e.Description, e.Location, e.DateTime, e.ID)
-	if err != nil {
-		return err
-	}
-
-	_, err = result.LastInsertId()
-
-	return err
+	row := stmt.QueryRow(e.Name, e.Description, e.Location, e.DateTime, e.ID)
+	return row.Err()
 }
 
 func (e Event) Delete() error {
-	query := `DELETE FROM events WHERE id = ?`
+	query := `DELETE FROM events WHERE id = $1`
 	stmt, err := db.DB.Prepare(query)
 	if err != nil {
 		return err
@@ -89,7 +85,7 @@ func GetAllEvents() ([]Event, error) {
 }
 
 func GetEventById(id int64) (*Event, error) {
-	query := "SELECT * FROM events WHERE id = ?"
+	query := "SELECT * FROM events WHERE id = $1"
 	row := db.DB.QueryRow(query, id)
 
 	var event Event
@@ -102,7 +98,7 @@ func GetEventById(id int64) (*Event, error) {
 }
 
 func (e *Event) Register(userId int64) error {
-	query := "INSERT INTO registration(event_id,user_id) VALUES (?, ?)"
+	query := "INSERT INTO registration(event_id,user_id) VALUES ($1, $2)"
 
 	stmt, err := db.DB.Prepare(query)
 
@@ -116,7 +112,7 @@ func (e *Event) Register(userId int64) error {
 }
 
 func (e *Event) CancelRegister(userId int64) error {
-	query := "DELETE FROM registration WHERE event_id=? AND user_id=?"
+	query := "DELETE FROM registration WHERE event_id=$1 AND user_id=$2"
 
 	stmt, err := db.DB.Prepare(query)
 
