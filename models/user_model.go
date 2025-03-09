@@ -14,32 +14,35 @@ type User struct {
 }
 
 func (u *User) Save() error {
-	query := "INSERT INTO users(email, password) VALUES (?, ?)"
+	query := "INSERT INTO users (email, password) VALUES ($1, $2) RETURNING id"
 
+	// Prepare the statement
 	stmt, err := db.DB.Prepare(query)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 
+	// Hash the password
 	hashedPassword, err := utils.HashPassword(u.Password)
 	if err != nil {
 		return err
 	}
-	res, err := stmt.Exec(u.Email, hashedPassword)
+
+	// Execute the query and retrieve the ID
+	var userID int64
+	err = stmt.QueryRow(u.Email, hashedPassword).Scan(&userID)
 	if err != nil {
 		return err
 	}
-	userId, err := res.LastInsertId()
-	if err != nil {
-		return err
-	}
-	u.ID = userId
-	return err
+
+	// Set the user's ID
+	u.ID = userID
+	return nil
 }
 
 func (u *User) ValidateCredintials() error {
-	query := "SELECT id, password FROM users WHERE email = ?"
+	query := "SELECT id, password FROM users WHERE email = $1"
 
 	row := db.DB.QueryRow(query, u.Email)
 	var storedPassword string
