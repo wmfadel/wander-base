@@ -1,23 +1,22 @@
 package routes
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"githuv.com/wmfadel/go_events/models"
+	"githuv.com/wmfadel/go_events/models" // Adjust to your actual import path (e.g., "github.com/wmfadel/go_events/models")
 )
 
 func getEvent(context *gin.Context) {
 	eventID, err := strconv.ParseInt(context.Param("id"), 10, 64)
 	if err != nil {
-		context.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("Failed to get event data: %v", err)})
+		context.JSON(http.StatusBadRequest, models.NewESError("Failed to parse event ID", err))
 		return
 	}
 	event, err := models.GetEventById(eventID)
 	if err != nil {
-		context.JSON(http.StatusNotExtended, gin.H{"message": fmt.Sprintf("Failed to get event data: %v", err)})
+		context.JSON(http.StatusNotFound, models.NewESError("Failed to get event data", err))
 		return
 	}
 	context.JSON(http.StatusOK, event)
@@ -26,7 +25,7 @@ func getEvent(context *gin.Context) {
 func getEvents(context *gin.Context) {
 	events, err := models.GetAllEvents()
 	if err != nil {
-		context.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("Failed to get events data: %v", err)})
+		context.JSON(http.StatusInternalServerError, models.NewESError("Failed to get events data", err))
 		return
 	}
 	context.JSON(http.StatusOK, events)
@@ -35,20 +34,16 @@ func getEvents(context *gin.Context) {
 func creatEvent(context *gin.Context) {
 	var event models.Event
 	err := context.ShouldBindJSON(&event)
-
 	if err != nil {
-		context.JSON(http.StatusBadRequest, gin.H{
-			"message": fmt.Sprintf("Could not parse event %v", err),
-		})
+		context.JSON(http.StatusBadRequest, models.NewESError("Could not parse event", err))
 		return
 	}
 
 	userId := context.GetInt64("userId")
 	event.UserID = userId
 	err = event.Save()
-
 	if err != nil {
-		context.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("Failed to create event: %v", err)})
+		context.JSON(http.StatusInternalServerError, models.NewESError("Failed to create event", err))
 		return
 	}
 
@@ -58,19 +53,22 @@ func creatEvent(context *gin.Context) {
 }
 
 func updateEvent(context *gin.Context) {
-	eventId, _ := strconv.ParseInt(context.Param("id"), 10, 64)
+	eventId, err := strconv.ParseInt(context.Param("id"), 10, 64)
+	if err != nil {
+		context.JSON(http.StatusBadRequest, models.NewESError("Failed to parse event ID", err))
+		return
+	}
 
 	var updatedEvent models.Event
-	err := context.ShouldBindJSON(&updatedEvent)
+	err = context.ShouldBindJSON(&updatedEvent)
 	if err != nil {
-		context.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("Missing event details: %v", err)})
+		context.JSON(http.StatusBadRequest, models.NewESError("Missing event details", err))
 		return
 	}
 	updatedEvent.ID = eventId
 	err = updatedEvent.Update()
-
 	if err != nil {
-		context.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("Failed to update event: %v", err)})
+		context.JSON(http.StatusInternalServerError, models.NewESError("Failed to update event", err))
 		return
 	}
 
@@ -78,27 +76,23 @@ func updateEvent(context *gin.Context) {
 }
 
 func deleteEvent(context *gin.Context) {
-
-	var event models.Event
-
 	// Get event from context using the key "event"
 	value, exists := context.Get("event")
 	if !exists {
-		context.JSON(http.StatusInternalServerError, gin.H{"message": "Event not found in context"})
+		context.JSON(http.StatusInternalServerError, models.NewESError("Event not found in context", nil))
 		return
 	}
 
 	// Type assert the value to models.Event
-	var ok bool
-	if event, ok = value.(models.Event); !ok {
-		context.JSON(http.StatusInternalServerError, gin.H{"message": "Invalid event data in context"})
+	event, ok := value.(models.Event)
+	if !ok {
+		context.JSON(http.StatusInternalServerError, models.NewESError("Invalid event data in context", nil))
 		return
 	}
 
 	err := event.Delete()
-
 	if err != nil {
-		context.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("Failed to delete event: %v", err)})
+		context.JSON(http.StatusInternalServerError, models.NewESError("Failed to delete event", err))
 		return
 	}
 

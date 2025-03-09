@@ -1,31 +1,24 @@
 package routes
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"githuv.com/wmfadel/go_events/models"
-	"githuv.com/wmfadel/go_events/utils"
+	"githuv.com/wmfadel/go_events/models" // Adjust to your actual import path (e.g., "github.com/wmfadel/go_events/models")
+	"githuv.com/wmfadel/go_events/utils"  // Adjust to your actual import path
 )
 
 func signupHanlder(context *gin.Context) {
 	var user models.User
-
 	err := context.ShouldBindJSON(&user)
-
 	if err != nil {
-		context.JSON(http.StatusBadRequest, gin.H{
-			"message": fmt.Sprintf("Could not parse user %v", err),
-		})
+		context.JSON(http.StatusBadRequest, models.NewESError("Could not parse user", err))
 		return
 	}
 
 	err = user.Save()
 	if err != nil {
-		context.JSON(http.StatusInternalServerError, gin.H{
-			"message": fmt.Sprintf("Could not save user %v", err),
-		})
+		context.JSON(http.StatusInternalServerError, models.NewESError("Could not save user", err))
 		return
 	}
 
@@ -36,30 +29,21 @@ func signupHanlder(context *gin.Context) {
 
 func loginHandler(context *gin.Context) {
 	var user models.User
-
 	err := context.ShouldBindJSON(&user)
-
 	if err != nil {
-		context.JSON(http.StatusBadRequest, gin.H{
-			"message": fmt.Sprintf("Could not parse user %v", err),
-		})
+		context.JSON(http.StatusBadRequest, models.NewESError("Could not parse user", err))
 		return
 	}
 
 	err = user.ValidateCredintials()
 	if err != nil {
-		context.JSON(http.StatusUnauthorized, gin.H{
-			"message": fmt.Sprintf("cannot verify identity %v", err),
-		})
+		context.JSON(http.StatusUnauthorized, models.NewESError("Cannot verify identity", err))
 		return
 	}
 
 	token, err := utils.GernerateToken(user.Email, user.ID)
-
 	if err != nil {
-		context.JSON(http.StatusInternalServerError, gin.H{
-			"message": fmt.Sprintf("cannot create token %v", err),
-		})
+		context.JSON(http.StatusInternalServerError, models.NewESError("Cannot create token", err))
 		return
 	}
 
@@ -67,5 +51,4 @@ func loginHandler(context *gin.Context) {
 		"message": "User Validated",
 		"token":   token,
 	})
-
 }
