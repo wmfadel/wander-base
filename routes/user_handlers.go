@@ -4,8 +4,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"githuv.com/wmfadel/go_events/models" // Adjust to your actual import path (e.g., "github.com/wmfadel/go_events/models")
-	"githuv.com/wmfadel/go_events/utils"  // Adjust to your actual import path
+	"github.com/wmfadel/escape-be/models"
+	"github.com/wmfadel/escape-be/utils"
 )
 
 func signupHanlder(context *gin.Context) {

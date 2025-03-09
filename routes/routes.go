@@ -2,7 +2,7 @@ package routes
 
 import (
 	"github.com/gin-gonic/gin"
-	"githuv.com/wmfadel/go_events/middlewares"
+	"github.com/wmfadel/escape-be/middlewares"
 )
 
 func RegisterRoutes(server *gin.Engine) {

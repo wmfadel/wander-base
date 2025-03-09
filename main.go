@@ -2,9 +2,9 @@ package main
 
 import (
 	"github.com/gin-gonic/gin"
-	"githuv.com/wmfadel/go_events/db"
-	"githuv.com/wmfadel/go_events/routes"
-	"githuv.com/wmfadel/go_events/utils"
+	"github.com/wmfadel/escape-be/db"
+	"github.com/wmfadel/escape-be/routes"
+	"github.com/wmfadel/escape-be/utils"
 )
 
 func main() {

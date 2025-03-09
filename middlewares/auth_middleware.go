@@ -6,8 +6,8 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"githuv.com/wmfadel/go_events/models"
-	"githuv.com/wmfadel/go_events/utils"
+	"github.com/wmfadel/escape-be/models"
+	"github.com/wmfadel/escape-be/utils"
 )
 
 func Authenticate(context *gin.Context) {

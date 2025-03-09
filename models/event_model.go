@@ -4,7 +4,7 @@ import (
 	"log"
 	"time"
 
-	"githuv.com/wmfadel/go_events/db"
+	"github.com/wmfadel/escape-be/db"
 )
 
 type Event struct {

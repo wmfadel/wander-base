@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"githuv.com/wmfadel/go_events/models" // Adjust to your actual import path (e.g., "github.com/wmfadel/go_events/models")
+	"github.com/wmfadel/escape-be/models" // Adjust to your actual import path (e.g., "github.com/wmfadel/go_events/models")
 )
 
 func getEvent(context *gin.Context) {

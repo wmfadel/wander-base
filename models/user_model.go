@@ -3,8 +3,8 @@ package models
 import (
 	"errors"
 
-	"githuv.com/wmfadel/go_events/db"
-	"githuv.com/wmfadel/go_events/utils"
+	"github.com/wmfadel/escape-be/db"
+	"github.com/wmfadel/escape-be/utils"
 )
 
 type User struct {

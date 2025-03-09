@@ -1,4 +1,4 @@
-module githuv.com/wmfadel/go_events
+module github.com/wmfadel/escape-be
 
 go 1.24.0
 

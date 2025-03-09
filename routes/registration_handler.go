@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"githuv.com/wmfadel/go_events/models"
+	"github.com/wmfadel/escape-be/models"
 )
 
 func registerForEvent(context *gin.Context) {
