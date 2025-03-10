@@ -15,7 +15,7 @@ func GernerateToken(email string, userId int64) (string, error) {
 		"exp":    time.Now().Add(time.Hour * 2).Unix(),
 	})
 
-	secretKey := GetFromEnv("secretKey")
+	secretKey := GetFromEnv("TOKEN_SECRET")
 	return token.SignedString([]byte(secretKey))
 }
 
@@ -27,7 +27,7 @@ func VerifyToken(token string) (int64, error) {
 			if !ok {
 				return nil, errors.New("wrong signing method")
 			}
-			return []byte(GetFromEnv("secretKey")), nil
+			return []byte(GetFromEnv("TOKEN_SECRET")), nil
 		},
 	)
 

@@ -6,24 +6,22 @@ import (
 	"log"
 
 	_ "github.com/lib/pq"
+	"github.com/wmfadel/escape-be/utils"
 )
 
 var DB *sql.DB
 
-const (
-	host     = "pg-2ea894ef-escape-eg.e.aivencloud.com"
-	port     = 14470
-	user     = "avnadmin"
-	password = "AVNS_prM8rH6cDM-1MBjZdxP"
-	dbname   = "defaultdb"
-)
-
 func InitDB() {
 	var err error
 
-	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
+	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s "+
 		"password=%s dbname=%s sslmode=require",
-		host, port, user, password, dbname)
+		utils.GetFromEnv("DB_HOST"),
+		utils.GetFromEnv("DB_PORT"),
+		utils.GetFromEnv("DB_USER"),
+		utils.GetFromEnv("DB_PASSWORD"),
+		utils.GetFromEnv("DB_NAME"),
+	)
 
 	// Assign to the global DB variable directly
 	DB, err = sql.Open("postgres", psqlInfo)
