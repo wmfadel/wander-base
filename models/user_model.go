@@ -1,7 +1,7 @@
 package models
 
 import (
-	"errors"
+	"fmt"
 
 	"github.com/wmfadel/escape-be/db"
 	"github.com/wmfadel/escape-be/utils"
@@ -19,21 +19,21 @@ func (u *User) Save() error {
 	// Prepare the statement
 	stmt, err := db.DB.Prepare(query)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to prepare query for saving user %w", err)
 	}
 	defer stmt.Close()
 
 	// Hash the password
 	hashedPassword, err := utils.HashPassword(u.Password)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to hash user password %w", err)
 	}
 
 	// Execute the query and retrieve the ID
 	var userID int64
 	err = stmt.QueryRow(u.Email, hashedPassword).Scan(&userID)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to execute query for saving user %w", err)
 	}
 
 	// Set the user's ID
@@ -50,13 +50,13 @@ func (u *User) ValidateCredintials() error {
 	err := row.Scan(&u.ID, &storedPassword)
 
 	if err != nil {
-		return errors.New("wrong credintials")
+		return fmt.Errorf("failed to find user, wrong credintials: %w", err)
 	}
 
 	isValidPassword := utils.CheckPasswordHash(u.Password, storedPassword)
 
 	if !isValidPassword {
-		return errors.New("wrong credintials")
+		return fmt.Errorf("invalid password, compared request password hash to existing password: %w", err)
 	}
 	return nil
 }

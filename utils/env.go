@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -8,7 +9,7 @@ import (
 
 func LoadEnv() error {
 	if err := godotenv.Load(); err != nil {
-		return err
+		return fmt.Errorf("failed toload environment variables %w", err)
 	}
 	return nil
 }

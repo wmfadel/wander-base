@@ -2,6 +2,7 @@ package utils
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -31,7 +32,7 @@ func VerifyToken(token string) (int64, error) {
 	)
 
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("jwt token parse failed %w", err)
 	}
 
 	if !parseedToken.Valid {
