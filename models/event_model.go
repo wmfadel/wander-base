@@ -3,6 +3,7 @@ package models
 import (
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/wmfadel/escape-be/db"
@@ -47,8 +48,11 @@ func (e Event) Update() error {
 		return fmt.Errorf("Update event failed to prepare update event quer: %w", err)
 	}
 	defer stmt.Close()
-	row := stmt.QueryRow(e.Name, e.Description, e.Location, e.DateTime, e.ID)
-	return fmt.Errorf("executing update query failed %w", row.Err())
+	_, err = stmt.Exec(e.Name, e.Description, e.Location, e.DateTime, e.ID)
+	if err != nil {
+		return fmt.Errorf("executing update event query failed: %w", err)
+	}
+	return fmt.Errorf("executing update query failed %w", err)
 }
 
 func (e Event) Delete() error {
@@ -124,4 +128,81 @@ func (e *Event) CancelRegister(userId int64) error {
 
 	_, err = stmt.Exec(e.ID, userId)
 	return fmt.Errorf("failed to prepare query for event unregistration %w", err)
+}
+
+func (e Event) UpdatePartially(patch PatchEvent) error {
+
+	if patch.IsEmpty() {
+		return fmt.Errorf("no fields provided for update")
+	}
+
+	query, values, err := buildUpdateQuery(e.ID, patch)
+	if err != nil {
+		return err // Already wrapped with context
+	}
+
+	return executeUpdateQuery(query, values)
+}
+
+// BuildUpdateQuery constructs the SQL query and values for the partial update
+func buildUpdateQuery(id int64, patch PatchEvent) (string, []interface{}, error) {
+	var setClauses []string
+	var values []interface{}
+	paramIndex := 1
+
+	// Build SET clauses and values for non-nil fields
+	if patch.Name != nil {
+		setClauses = append(setClauses, fmt.Sprintf("name = $%d", paramIndex))
+		values = append(values, *patch.Name)
+		paramIndex++
+	}
+	if patch.Description != nil {
+		setClauses = append(setClauses, fmt.Sprintf("description = $%d", paramIndex))
+		values = append(values, *patch.Description)
+		paramIndex++
+	}
+	if patch.Location != nil {
+		setClauses = append(setClauses, fmt.Sprintf("location = $%d", paramIndex))
+		values = append(values, *patch.Location)
+		paramIndex++
+	}
+	if patch.DateTime != nil {
+		setClauses = append(setClauses, fmt.Sprintf("dateTime = $%d", paramIndex))
+		values = append(values, *patch.DateTime)
+		paramIndex++
+	}
+
+	if len(setClauses) == 0 {
+		return "", nil, fmt.Errorf("no fields provided for update")
+	}
+
+	// Construct the query
+	query := "UPDATE events SET " + strings.Join(setClauses, ", ") + " WHERE id = $" + fmt.Sprintf("%d", paramIndex)
+	values = append(values, id)
+
+	return query, values, nil
+}
+
+// ExecuteUpdateQuery executes the provided SQL query with the given values
+func executeUpdateQuery(query string, values []interface{}) error {
+	stmt, err := db.DB.Prepare(query)
+	if err != nil {
+		return fmt.Errorf("failed to prepare update query: %w", err)
+	}
+	defer stmt.Close()
+
+	result, err := stmt.Exec(values...)
+	if err != nil {
+		return fmt.Errorf("failed to execute update query: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("no event found")
+	}
+
+	return nil
 }
