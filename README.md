@@ -14,12 +14,12 @@ The tasks below are organized logically to ensure steady progress. Each includes
 
 Build the foundation with these essential tasks:
 
-1. **Better Error Handling**  
+1. **Better Error Handling** ✅
    - Prevents crashes and aids debugging.  
    - Use Go’s `error` type for clear messages.  
    - *Learn*: Error wrapping in Go.
 
-2. **Request Data Validations**  
+2. **Request Data Validations**  ✅
    - Ensures secure, valid inputs (e.g., event dates).  
    - Use a library like `go-playground/validator`.  
    - *Learn*: Input validation techniques.
