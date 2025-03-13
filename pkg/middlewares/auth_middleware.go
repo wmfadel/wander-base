@@ -6,11 +6,21 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/wmfadel/escape-be/models"
-	"github.com/wmfadel/escape-be/utils"
+	"github.com/wmfadel/escape-be/internal/service"
+	"github.com/wmfadel/escape-be/pkg/utils"
 )
 
-func Authenticate(context *gin.Context) {
+type AuthMiddleware struct {
+	service *service.EventService
+}
+
+func NewAuthMiddleware(service *service.EventService) *AuthMiddleware {
+	return &AuthMiddleware{
+		service: service,
+	}
+}
+
+func (amw *AuthMiddleware) Authenticate(context *gin.Context) {
 	token := context.Request.Header.Get("Authorization")
 
 	if token == "" {
@@ -32,7 +42,7 @@ func Authenticate(context *gin.Context) {
 	context.Next()
 }
 
-func AuthorizeForEventEdits(context *gin.Context) {
+func (amw *AuthMiddleware) AuthorizeForEventEdits(context *gin.Context) {
 
 	eventId, err := strconv.ParseInt(context.Param("id"), 10, 64)
 
@@ -41,7 +51,7 @@ func AuthorizeForEventEdits(context *gin.Context) {
 		return
 	}
 
-	event, err := models.GetEventById(eventId)
+	event, err := amw.service.GetEventById(eventId)
 	if err != nil {
 		context.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("Could not find this event: %v", err)})
 		return

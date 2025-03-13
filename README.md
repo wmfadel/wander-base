@@ -35,7 +35,7 @@ Build the foundation with these essential tasks:
 
 Improve usability with these features:
 
-4. **Partial Event Updates**  
+4. **Partial Event Updates**  ✅
    - Allows efficient updates via HTTP PATCH.  
    - *Learn*: RESTful API design.
 

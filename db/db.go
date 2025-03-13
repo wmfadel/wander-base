@@ -6,12 +6,10 @@ import (
 	"log"
 
 	_ "github.com/lib/pq"
-	"github.com/wmfadel/escape-be/utils"
+	"github.com/wmfadel/escape-be/pkg/utils"
 )
 
-var DB *sql.DB
-
-func InitDB() {
+func InitDB() *sql.DB {
 	var err error
 
 	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s "+
@@ -24,27 +22,28 @@ func InitDB() {
 	)
 
 	// Assign to the global DB variable directly
-	DB, err = sql.Open("postgres", psqlInfo)
+	db, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
 		log.Fatalf("Error opening database: %v", err)
 	}
 
 	// Do NOT defer DB.Close() here; close it in main or when the app shuts down
 
-	err = DB.Ping()
+	err = db.Ping()
 	if err != nil {
-		DB.Close() // Clean up if ping fails
+		db.Close() // Clean up if ping fails
 		log.Fatalf("Error pinging database: %v", err)
 	}
 
-	DB.SetMaxOpenConns(10)
-	DB.SetMaxIdleConns(5)
+	db.SetMaxOpenConns(10)
+	db.SetMaxIdleConns(5)
 
-	createTables()
+	createTables(db)
 	log.Println("Database Connected...")
+	return db
 }
 
-func createTables() {
+func createTables(db *sql.DB) {
 	createUsersTable := `
 		CREATE TABLE IF NOT EXISTS users (
 			id SERIAL PRIMARY KEY,
@@ -52,7 +51,7 @@ func createTables() {
 			password TEXT NOT NULL
 		)
 	`
-	_, err := DB.Exec(createUsersTable)
+	_, err := db.Exec(createUsersTable)
 	if err != nil {
 		log.Fatalf("Failed to create users table: %v", err)
 	}
@@ -68,7 +67,7 @@ func createTables() {
 			FOREIGN KEY (user_id) REFERENCES users(id)
 		)
 	`
-	_, err = DB.Exec(createEventsTable)
+	_, err = db.Exec(createEventsTable)
 	if err != nil {
 		log.Fatalf("Failed to create events table: %v", err)
 	}
@@ -82,7 +81,7 @@ func createTables() {
 			FOREIGN KEY (user_id) REFERENCES users(id)
 		)
 	`
-	_, err = DB.Exec(createRegistrationTable)
+	_, err = db.Exec(createRegistrationTable)
 	if err != nil {
 		log.Fatalf("Failed to create registrations table: %v", err)
 	}

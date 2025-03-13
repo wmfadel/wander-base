@@ -1,37 +1,23 @@
-package routes
+package handlers
 
 import (
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/wmfadel/escape-be/models" // Adjust to your actual import path (e.g., "github.com/wmfadel/go_events/models")
+	"github.com/wmfadel/escape-be/internal/models"
+	"github.com/wmfadel/escape-be/internal/service"
 )
 
-func getEvent(context *gin.Context) {
-	eventID, err := strconv.ParseInt(context.Param("id"), 10, 64)
-	if err != nil {
-		context.JSON(http.StatusBadRequest, models.NewESError("Failed to parse event ID", err))
-		return
-	}
-	event, err := models.GetEventById(eventID)
-	if err != nil {
-		context.JSON(http.StatusNotFound, models.NewESError("Failed to get event data", err))
-		return
-	}
-	context.JSON(http.StatusOK, event)
+type EventHandler struct {
+	service *service.EventService
 }
 
-func getEvents(context *gin.Context) {
-	events, err := models.GetAllEvents()
-	if err != nil {
-		context.JSON(http.StatusInternalServerError, models.NewESError("Failed to get events data", err))
-		return
-	}
-	context.JSON(http.StatusOK, events)
+func NewEventHandler(service *service.EventService) *EventHandler {
+	return &EventHandler{service: service}
 }
 
-func creatEvent(context *gin.Context) {
+func (h *EventHandler) CreateEvent(context *gin.Context) {
 	var event models.Event
 	err := context.ShouldBindJSON(&event)
 	if err != nil {
@@ -41,7 +27,7 @@ func creatEvent(context *gin.Context) {
 
 	userId := context.GetInt64("userId")
 	event.UserID = userId
-	err = event.Save()
+	err = h.service.CreateEvent(&event)
 	if err != nil {
 		context.JSON(http.StatusInternalServerError, models.NewESError("Failed to create event", err))
 		return
@@ -52,7 +38,30 @@ func creatEvent(context *gin.Context) {
 	})
 }
 
-func updateEvent(context *gin.Context) {
+func (h *EventHandler) GetEvent(context *gin.Context) {
+	eventID, err := strconv.ParseInt(context.Param("id"), 10, 64)
+	if err != nil {
+		context.JSON(http.StatusBadRequest, models.NewESError("Failed to parse event ID", err))
+		return
+	}
+	event, err := h.service.GetEventById(eventID)
+	if err != nil {
+		context.JSON(http.StatusNotFound, models.NewESError("Failed to get event data", err))
+		return
+	}
+	context.JSON(http.StatusOK, event)
+}
+
+func (h *EventHandler) GetEvents(context *gin.Context) {
+	events, err := h.service.GetAllEvents()
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, models.NewESError("Failed to get events data", err))
+		return
+	}
+	context.JSON(http.StatusOK, events)
+}
+
+func (h *EventHandler) UpdateEvent(context *gin.Context) {
 	eventId, err := strconv.ParseInt(context.Param("id"), 10, 64)
 	if err != nil {
 		context.JSON(http.StatusBadRequest, models.NewESError("Failed to parse event ID", err))
@@ -69,7 +78,7 @@ func updateEvent(context *gin.Context) {
 	}
 
 	updatedEvent.ID = eventId
-	err = updatedEvent.UpdatePartially(patchEvent)
+	err = h.service.UpdatePartially(eventId, patchEvent)
 	if err != nil {
 		context.JSON(http.StatusInternalServerError, models.NewESError("Failed to update event", err))
 		return
@@ -78,7 +87,7 @@ func updateEvent(context *gin.Context) {
 	context.JSON(http.StatusOK, gin.H{"message": "Event updated"})
 }
 
-func deleteEvent(context *gin.Context) {
+func (h *EventHandler) DeleteEvent(context *gin.Context) {
 	// Get event from context using the key "event"
 	value, exists := context.Get("event")
 	if !exists {
@@ -93,7 +102,7 @@ func deleteEvent(context *gin.Context) {
 		return
 	}
 
-	err := event.Delete()
+	err := h.service.Delete(event.ID)
 	if err != nil {
 		context.JSON(http.StatusInternalServerError, models.NewESError("Failed to delete event", err))
 		return

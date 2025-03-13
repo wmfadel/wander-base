@@ -1,14 +1,23 @@
-package routes
+package handlers
 
 import (
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/wmfadel/escape-be/models"
+	"github.com/wmfadel/escape-be/internal/models"
+	"github.com/wmfadel/escape-be/internal/service"
 )
 
-func registerForEvent(context *gin.Context) {
+type RegistrationHandler struct {
+	service *service.EventService
+}
+
+func NewRegistrationHandler(service *service.EventService) *RegistrationHandler {
+	return &RegistrationHandler{service: service}
+}
+
+func (h *RegistrationHandler) RegisterForEvent(context *gin.Context) {
 	userId := context.GetInt64("userId")
 	eventId, err := strconv.ParseInt(context.Param("id"), 10, 64)
 	if err != nil {
@@ -16,13 +25,13 @@ func registerForEvent(context *gin.Context) {
 		return
 	}
 
-	event, err := models.GetEventById(eventId)
+	event, err := h.service.GetEventById(eventId)
 	if err != nil {
 		context.JSON(http.StatusNotFound, models.NewESError("Event not found", err))
 		return
 	}
 
-	err = event.Register(userId)
+	err = h.service.Register(userId, event.ID)
 	if err != nil {
 		context.JSON(http.StatusInternalServerError, models.NewESError("Cannot register for event", err))
 		return
@@ -33,7 +42,7 @@ func registerForEvent(context *gin.Context) {
 	})
 }
 
-func cancelRegistrationEvent(context *gin.Context) {
+func (h *RegistrationHandler) CancelRegistrationEvent(context *gin.Context) {
 	userId := context.GetInt64("userId")
 	eventId, err := strconv.ParseInt(context.Param("id"), 10, 64)
 	if err != nil {
@@ -42,7 +51,7 @@ func cancelRegistrationEvent(context *gin.Context) {
 	}
 
 	event := models.Event{ID: eventId}
-	err = event.CancelRegister(userId)
+	err = h.service.CancelRegister(userId, event.ID)
 	if err != nil {
 		context.JSON(http.StatusInternalServerError, models.NewESError("Cancelling registration failed", err))
 		return

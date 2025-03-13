@@ -1,14 +1,23 @@
-package routes
+package handlers
 
 import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/wmfadel/escape-be/models"
-	"github.com/wmfadel/escape-be/utils"
+	"github.com/wmfadel/escape-be/internal/models"
+	"github.com/wmfadel/escape-be/internal/service"
+	"github.com/wmfadel/escape-be/pkg/utils"
 )
 
-func signupHanlder(context *gin.Context) {
+type UserHandler struct {
+	service *service.UserService
+}
+
+func NewUserHandler(service *service.UserService) *UserHandler {
+	return &UserHandler{service: service}
+}
+
+func (h *UserHandler) SignupHanlder(context *gin.Context) {
 	var user models.User
 	err := context.ShouldBindJSON(&user)
 	if err != nil {
@@ -16,7 +25,7 @@ func signupHanlder(context *gin.Context) {
 		return
 	}
 
-	err = user.Save()
+	err = h.service.Save(&user)
 	if err != nil {
 		context.JSON(http.StatusInternalServerError, models.NewESError("Could not save user", err))
 		return
@@ -27,7 +36,7 @@ func signupHanlder(context *gin.Context) {
 	})
 }
 
-func loginHandler(context *gin.Context) {
+func (h *UserHandler) LoginHandler(context *gin.Context) {
 	var user models.User
 	err := context.ShouldBindJSON(&user)
 	if err != nil {
@@ -35,7 +44,7 @@ func loginHandler(context *gin.Context) {
 		return
 	}
 
-	err = user.ValidateCredintials()
+	err = h.service.ValidateCredintials(&user)
 	if err != nil {
 		context.JSON(http.StatusUnauthorized, models.NewESError("Cannot verify identity", err))
 		return
