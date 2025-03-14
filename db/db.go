@@ -72,7 +72,7 @@ func createTables(db *sql.DB) {
 			description Text NOT NULL,
 			default_role BOOLEAN NOT NULL
 		)`,
-		`CREATE TABLE user_roles (
+		`CREATE TABLE IF NOT EXISTS user_roles (
   			user_id INTEGER NOT NULL,
     		role_id INTEGER NOT NULL,
     		FOREIGN KEY (user_id) REFERENCES users(id),
@@ -82,10 +82,10 @@ func createTables(db *sql.DB) {
 	}
 
 	seedData := []string{
-		`INSERT INTO roles (name, description) VALUES ('admin', 'Admin role, false')`,
-		`INSERT INTO roles (name, description) VALUES ('organizer', 'Admin role, false')`,
-		`INSERT INTO roles (name, description) VALUES ('photographer', 'Admin role, false')`,
-		`INSERT INTO roles (name, description) VALUES ('user', 'User role, true')`,
+		`INSERT INTO roles (name, description, default_role) VALUES ('admin', 'Admin role', FALSE)`,
+		`INSERT INTO roles (name, description, default_role) VALUES ('organizer', 'Admin role', FALSE)`,
+		`INSERT INTO roles (name, description, default_role) VALUES ('photographer', 'Admin role', FALSE)`,
+		`INSERT INTO roles (name, description, default_role) VALUES ('user', 'User role', TRUE)`,
 	}
 
 	for _, table := range tables {
