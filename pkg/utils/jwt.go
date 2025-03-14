@@ -8,9 +8,9 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func GernerateToken(email string, userId int64) (string, error) {
+func GernerateToken(phone string, userId int64) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"email":  email,
+		"phone":  phone,
 		"userId": userId,
 		"exp":    time.Now().Add(time.Hour * 2).Unix(),
 	})
@@ -45,7 +45,6 @@ func VerifyToken(token string) (int64, error) {
 		return 0, errors.New("invalid token")
 	}
 
-	// email, _ := claims["email"].(string)
 	userId := int64(claims["userId"].(float64))
 
 	return userId, nil

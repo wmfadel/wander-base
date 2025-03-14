@@ -44,20 +44,13 @@ func InitDB() *sql.DB {
 }
 
 func createTables(db *sql.DB) {
-	createUsersTable := `
-		CREATE TABLE IF NOT EXISTS users (
+	tables := []string{
+		`CREATE TABLE IF NOT EXISTS users (
 			id SERIAL PRIMARY KEY,
-			email TEXT NOT NULL UNIQUE,
+			phone TEXT NOT NULL UNIQUE,
 			password TEXT NOT NULL
-		)
-	`
-	_, err := db.Exec(createUsersTable)
-	if err != nil {
-		log.Fatalf("Failed to create users table: %v", err)
-	}
-
-	createEventsTable := `
-		CREATE TABLE IF NOT EXISTS events (
+		)`,
+		`CREATE TABLE IF NOT EXISTS events (
 			id SERIAL PRIMARY KEY,
 			name TEXT NOT NULL,
 			description TEXT NOT NULL,
@@ -65,24 +58,44 @@ func createTables(db *sql.DB) {
 			dateTime TIMESTAMP NOT NULL,
 			user_id INTEGER,
 			FOREIGN KEY (user_id) REFERENCES users(id)
-		)
-	`
-	_, err = db.Exec(createEventsTable)
-	if err != nil {
-		log.Fatalf("Failed to create events table: %v", err)
-	}
-
-	createRegistrationTable := `
-		CREATE TABLE IF NOT EXISTS registrations (
+		)`,
+		`CREATE TABLE IF NOT EXISTS registrations (
 			id SERIAL PRIMARY KEY,
 			event_id INTEGER,
 			user_id INTEGER,
 			FOREIGN KEY (event_id) REFERENCES events(id),
 			FOREIGN KEY (user_id) REFERENCES users(id)
-		)
-	`
-	_, err = db.Exec(createRegistrationTable)
-	if err != nil {
-		log.Fatalf("Failed to create registrations table: %v", err)
+		)`,
+		`CREATE TABLE IF NOT EXISTS roles (
+			id SERIAL PRIMARY KEY,
+			name TEXT NOT NULL UNIQUE,
+			description Text NOT NULL,
+			default_role BOOLEAN NOT NULL
+		)`,
+		`CREATE TABLE IF NOT EXISTS user_roles (
+  			user_id INTEGER NOT NULL,
+    		role_id INTEGER NOT NULL,
+    		FOREIGN KEY (user_id) REFERENCES users(id),
+   			FOREIGN KEY (role_id) REFERENCES roles(id),
+    		PRIMARY KEY (user_id, role_id)
+		)`,
+	}
+
+	seedData := []string{
+		`INSERT INTO roles (name, description, default_role) VALUES ('admin', 'Admin role', FALSE)`,
+		`INSERT INTO roles (name, description, default_role) VALUES ('organizer', 'Admin role', FALSE)`,
+		`INSERT INTO roles (name, description, default_role) VALUES ('photographer', 'Admin role', FALSE)`,
+		`INSERT INTO roles (name, description, default_role) VALUES ('user', 'User role', TRUE)`,
+	}
+
+	for _, table := range tables {
+		if _, err := db.Exec(table); err != nil {
+			log.Fatalf("Failed to create table: %v", err)
+		}
+	}
+	for _, data := range seedData {
+		if _, err := db.Exec(data); err != nil {
+			log.Fatalf("Failed to add seed data to table: %v", err)
+		}
 	}
 }
