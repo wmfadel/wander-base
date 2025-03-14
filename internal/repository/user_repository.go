@@ -17,7 +17,7 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 }
 
 func (repo *UserRepository) Save(user *models.User) error {
-	query := "INSERT INTO users (email, password) VALUES ($1, $2) RETURNING id"
+	query := "INSERT INTO users (phone, password) VALUES ($1, $2) RETURNING id"
 
 	// Prepare the statement
 	stmt, err := repo.db.Prepare(query)
@@ -34,7 +34,7 @@ func (repo *UserRepository) Save(user *models.User) error {
 
 	// Execute the query and retrieve the ID
 	var userID int64
-	err = stmt.QueryRow(user.Email, hashedPassword).Scan(&userID)
+	err = stmt.QueryRow(user.Phone, hashedPassword).Scan(&userID)
 	if err != nil {
 		return fmt.Errorf("failed to execute query for saving user %w", err)
 	}
@@ -45,9 +45,9 @@ func (repo *UserRepository) Save(user *models.User) error {
 }
 
 func (repo *UserRepository) ValidateCredintials(user *models.User) error {
-	query := "SELECT id, password FROM users WHERE email = $1"
+	query := "SELECT id, password FROM users WHERE Phone = $1"
 
-	row := repo.db.QueryRow(query, user.Email)
+	row := repo.db.QueryRow(query, user.Phone)
 	var storedPassword string
 
 	err := row.Scan(&user.ID, &storedPassword)

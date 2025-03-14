@@ -50,7 +50,7 @@ func (h *UserHandler) LoginHandler(context *gin.Context) {
 		return
 	}
 
-	token, err := utils.GernerateToken(user.Email, user.ID)
+	token, err := utils.GernerateToken(user.Phone, user.ID)
 	if err != nil {
 		context.JSON(http.StatusInternalServerError, models.NewESError("Cannot create token", err))
 		return
