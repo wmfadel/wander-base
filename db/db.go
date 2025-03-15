@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 	"github.com/wmfadel/escape-be/pkg/utils"
 )
 
@@ -95,6 +95,10 @@ func createTables(db *sql.DB) {
 	}
 	for _, data := range seedData {
 		if _, err := db.Exec(data); err != nil {
+			if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
+				continue
+			}
+
 			log.Fatalf("Failed to add seed data to table: %v", err)
 		}
 	}

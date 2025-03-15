@@ -15,9 +15,11 @@ func main() {
 	}
 	dbConnection := db.InitDB()
 
-	container := di.NewDependencies(dbConnection)
-
 	server := gin.Default()
+	server.Static("/user_photos", "./public/user_photos")
+	server.Static("/event_photos", "./public/event_photos")
+
+	container := di.NewDependencies(dbConnection)
 	routes.RegisterRoutes(server, *container)
 
 	server.Run(":8080")

@@ -25,7 +25,7 @@ func (h *UserHandler) SignupHanlder(context *gin.Context) {
 		return
 	}
 
-	err = h.service.Save(&user)
+	err = h.service.Create(&user)
 	if err != nil {
 		context.JSON(http.StatusInternalServerError, models.NewESError("Could not save user", err))
 		return
@@ -60,4 +60,19 @@ func (h *UserHandler) LoginHandler(context *gin.Context) {
 		"message": "User Validated",
 		"token":   token,
 	})
+}
+
+func (h *UserHandler) UpdatePhoto(c *gin.Context) {
+	userId := c.GetInt64("userId") // From auth middleware
+	photo, err := c.FormFile("photo")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "photo required"})
+		return
+	}
+	url, err := h.service.UpdatePhoto(userId, photo)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Photo updated", "url": url})
 }

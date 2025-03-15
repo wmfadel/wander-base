@@ -7,13 +7,14 @@ import (
 	"github.com/wmfadel/escape-be/internal/repository"
 	"github.com/wmfadel/escape-be/internal/service"
 	"github.com/wmfadel/escape-be/pkg/middlewares"
+	"github.com/wmfadel/escape-be/pkg/utils"
 )
 
 // DIContainer holds all shared app dependencies
 type DIContainer struct {
 	// DB
-	DB *sql.DB
-
+	DB      *sql.DB
+	Storage *utils.Storage
 	// Services
 	EventService *service.EventService
 	UserService  *service.UserService
@@ -30,9 +31,10 @@ type DIContainer struct {
 
 // NewDependencies initializes the dependency container
 func NewDependencies(db *sql.DB) *DIContainer {
+	storage := utils.NewStorage("http://localhost:8080")
 	// Repositories initialization
 	eventRepo := repository.NewEventRepository(db)
-	userRepo := repository.NewUserRepository(db)
+	userRepo := repository.NewUserRepository(db, storage)
 	rolesRepo := repository.NewRoleRepository(db)
 	// Services initialization
 	eventService := service.NewEventService(eventRepo)
@@ -48,6 +50,7 @@ func NewDependencies(db *sql.DB) *DIContainer {
 
 	return &DIContainer{
 		DB:                  db,
+		Storage:             storage,
 		EventService:        eventService,
 		UserService:         userService,
 		RolesService:        rolesService,
