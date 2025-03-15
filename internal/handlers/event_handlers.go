@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"mime/multipart"
 	"net/http"
 	"strconv"
 
@@ -35,15 +34,8 @@ func (h *EventHandler) CreateEvent(c *gin.Context) {
 	}
 	event.UserID = userID.(int64)
 
-	// Handle photo uploads separately
-	form, err := c.MultipartForm()
-	var photos []*multipart.FileHeader
-	if err == nil && form != nil {
-		photos = form.File["photos"]
-	}
-
 	// Create event with photos
-	if err := h.service.CreateEvent(&event, photos); err != nil {
+	if err := h.service.CreateEvent(&event); err != nil {
 		c.JSON(http.StatusInternalServerError, models.NewESError("Failed to create event", err))
 		return
 	}

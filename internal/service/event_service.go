@@ -1,9 +1,6 @@
 package service
 
 import (
-	"fmt"
-	"mime/multipart"
-
 	"github.com/wmfadel/escape-be/internal/models"
 	"github.com/wmfadel/escape-be/internal/repository"
 )
@@ -17,22 +14,8 @@ func NewEventService(repo *repository.EventRepository, photoService *EventPhotoS
 	return &EventService{repo: repo, photoService: photoService}
 }
 
-func (s *EventService) CreateEvent(event *models.Event, photos []*multipart.FileHeader) error {
-	if err := s.repo.Save(event); err != nil {
-		return fmt.Errorf("failed to create event: %w", err)
-	}
-	if len(photos) > 0 {
-		if err := s.photoService.AddPhotos(event.ID, photos); err != nil {
-			return fmt.Errorf("failed to add photos to event: %w", err)
-		}
-		// Fetch and set photo URLs
-		photoURLs, err := s.photoService.GetPhotos(event.ID)
-		if err != nil {
-			return fmt.Errorf("failed to get photo URLs: %w", err)
-		}
-		event.Photos = photoURLs
-	}
-	return nil
+func (s *EventService) CreateEvent(event *models.Event) error {
+	return s.repo.Save(event)
 }
 
 func (s *EventService) GetEventById(eventId int64) (*models.Event, error) {
