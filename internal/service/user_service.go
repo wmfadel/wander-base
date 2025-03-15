@@ -8,12 +8,14 @@ import (
 )
 
 type UserService struct {
-	repo *repository.UserRepository
+	repo      *repository.UserRepository
+	rolesRepo *repository.RoleRepository
 }
 
-func NewUserService(repo *repository.UserRepository) *UserService {
+func NewUserService(repo *repository.UserRepository, rolesRepo *repository.RoleRepository) *UserService {
 	return &UserService{
-		repo: repo,
+		repo:      repo,
+		rolesRepo: rolesRepo,
 	}
 }
 
@@ -21,6 +23,18 @@ func (s *UserService) Create(user *models.User) error {
 	return s.repo.Create(user)
 }
 
+func (s *UserService) GetUserByID(id int64) (*models.User, error) {
+	user, err := s.repo.GetUserByID(id)
+
+	if err != nil {
+		return nil, err
+	}
+	user.Roles, err = s.rolesRepo.GetRolesByUserId(id)
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
+}
 func (s *UserService) ValidateCredintials(user *models.User) error {
 	return s.repo.ValidateCredintials(user)
 }

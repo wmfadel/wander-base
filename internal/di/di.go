@@ -41,7 +41,7 @@ func NewDependencies(db *sql.DB) *DIContainer {
 	// Services initialization
 	eventPhotosService := service.NewEventPhotoService(eventPhotosRepository)
 	eventService := service.NewEventService(eventRepo, eventPhotosService)
-	userService := service.NewUserService(userRepo)
+	userService := service.NewUserService(userRepo, rolesRepo)
 	rolesService := service.NewRoleService(rolesRepo)
 	// Handlers initialization
 	eventHandler := handlers.NewEventHandler(eventService, eventPhotosService)
@@ -49,7 +49,7 @@ func NewDependencies(db *sql.DB) *DIContainer {
 	registrationHandler := handlers.NewRegistrationHandler(eventService)
 
 	// Middlewares initialization
-	authMiddleware := middleware.NewAuthMiddleware(eventService)
+	authMiddleware := middleware.NewAuthMiddleware(userService, eventService)
 
 	return &DIContainer{
 		DB:                  db,

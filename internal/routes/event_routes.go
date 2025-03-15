@@ -13,10 +13,10 @@ func RegisterEventRoutes(r *gin.Engine, c di.DIContainer, authMW *middleware.Aut
 
 	// Guarded event routes (require authentication)
 	guarded := r.Group("/", authMW.Authenticate)
-	guarded.POST("/events", c.EventHandler.CreateEvent)
 
 	// Event edit routes (require authentication + authorization)
-	editGuarded := guarded.Group("/", authMW.AuthorizeForEventEdits)
+	editGuarded := guarded.Group("/", authMW.RequiresAdmin)
+	editGuarded.POST("/events", c.EventHandler.CreateEvent)
 	editGuarded.PUT("/events/:id", c.EventHandler.UpdateEvent)
 	editGuarded.DELETE("/events/:id", c.EventHandler.DeleteEvent)
 	editGuarded.POST("/events/photos/:id", c.EventHandler.AddPhotos)

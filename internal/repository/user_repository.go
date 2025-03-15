@@ -45,6 +45,18 @@ func (repo *UserRepository) Create(user *models.User) error {
 	return nil
 }
 
+func (repo *UserRepository) GetUserByID(id int64) (*models.User, error) {
+	query := "SELECT id, phone, password FROM users WHERE id = $1"
+
+	user := &models.User{}
+
+	err := repo.db.QueryRow(query, id).Scan(&user.ID, &user.Phone, &user.Password)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find user: %w", err)
+	}
+
+	return user, nil
+}
 func (repo *UserRepository) ValidateCredintials(user *models.User) error {
 	query := "SELECT id, password FROM users WHERE Phone = $1"
 

@@ -147,21 +147,21 @@ func (h *EventHandler) DeletePhotos(c *gin.Context) {
 }
 
 func (h *EventHandler) DeleteEvent(context *gin.Context) {
-	// Get event from context using the key "event"
-	value, exists := context.Get("event")
-	if !exists {
-		context.JSON(http.StatusInternalServerError, models.NewESError("Event not found in context", nil))
+
+	eventId, err := strconv.ParseInt(context.Param("id"), 10, 64)
+
+	if err != nil {
+		context.AbortWithStatusJSON(http.StatusBadRequest, models.NewESError("Failed to parse event ID", err))
 		return
 	}
 
-	// Type assert the value to models.Event
-	event, ok := value.(models.Event)
-	if !ok {
-		context.JSON(http.StatusInternalServerError, models.NewESError("Invalid event data in context", nil))
+	event, err := h.service.GetEventById(eventId)
+	if err != nil {
+		context.AbortWithStatusJSON(http.StatusBadRequest, models.NewESError("Could not find event", err))
 		return
 	}
 
-	err := h.service.Delete(event.ID, event.Photos)
+	err = h.service.Delete(event.ID, event.Photos)
 	if err != nil {
 		context.JSON(http.StatusInternalServerError, models.NewESError("Failed to delete event", err))
 		return

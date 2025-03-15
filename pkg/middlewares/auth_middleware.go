@@ -1,9 +1,8 @@
 package middleware
 
 import (
-	"fmt"
+	"log"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/wmfadel/escape-be/internal/models"
@@ -12,12 +11,14 @@ import (
 )
 
 type AuthMiddleware struct {
-	service *service.EventService
+	userService  *service.UserService
+	eventService *service.EventService
 }
 
-func NewAuthMiddleware(service *service.EventService) *AuthMiddleware {
+func NewAuthMiddleware(userService *service.UserService, eventService *service.EventService) *AuthMiddleware {
 	return &AuthMiddleware{
-		service: service,
+		userService:  userService,
+		eventService: eventService,
 	}
 }
 
@@ -33,36 +34,47 @@ func (amw *AuthMiddleware) Authenticate(context *gin.Context) {
 
 	userId, err := utils.VerifyToken(token)
 	if err != nil {
-		context.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-			"message": fmt.Sprintf("invalid token %v", err),
-		})
+		context.AbortWithStatusJSON(http.StatusUnauthorized, models.NewESError("Invalid token", err))
 		return
 	}
 
+	if userId == 0 {
+		context.AbortWithStatusJSON(http.StatusUnauthorized, models.NewESError("user not found", err))
+		return
+	}
+
+	user, err := amw.userService.GetUserByID(userId)
+
+	if err != nil || user == nil {
+		context.AbortWithStatusJSON(http.StatusUnauthorized, models.NewESError("user not found", err))
+		return
+	}
+	log.Printf("user in middleware: %v", user)
 	context.Set("userId", userId)
+	context.Set("user", *user)
 	context.Next()
 }
 
-func (amw *AuthMiddleware) AuthorizeForEventEdits(context *gin.Context) {
+func (amw *AuthMiddleware) RequiresAdmin(context *gin.Context) {
 
-	eventId, err := strconv.ParseInt(context.Param("id"), 10, 64)
+	user, err := utils.GetUserFromContext(context)
 
 	if err != nil {
-		context.AbortWithStatusJSON(http.StatusBadRequest, models.NewESError("Failed to parse event ID", err))
+		context.AbortWithStatusJSON(http.StatusBadRequest, models.NewESError("Could not find user", err))
 		return
 	}
 
-	event, err := amw.service.GetEventById(eventId)
-	if err != nil {
-		context.AbortWithStatusJSON(http.StatusBadRequest, models.NewESError("Could not find event", err))
-		return
-	}
-	userId := context.GetInt64("userId")
-	if event.UserID != userId {
-		context.AbortWithStatusJSON(http.StatusUnauthorized, models.NewESError("Not authorized", err))
-		return
+	isAdmin := false
+	for _, role := range user.Roles {
+		if role.ID == 1 {
+			isAdmin = true
+			break
+		}
 	}
 
-	context.Set("event", *event)
+	if !isAdmin {
+		context.AbortWithStatusJSON(http.StatusUnauthorized, models.NewESError("Unauthorized to edit this event", nil))
+		return
+	}
 	context.Next()
 }
