@@ -17,7 +17,7 @@ func NewUserHandler(service *service.UserService) *UserHandler {
 	return &UserHandler{service: service}
 }
 
-func (h *UserHandler) SignupHanlder(context *gin.Context) {
+func (h *UserHandler) SignupHandler(context *gin.Context) {
 	var user models.User
 	err := context.ShouldBindJSON(&user)
 	if err != nil {

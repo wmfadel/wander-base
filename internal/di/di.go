@@ -6,7 +6,7 @@ import (
 	"github.com/wmfadel/escape-be/internal/handlers"
 	"github.com/wmfadel/escape-be/internal/repository"
 	"github.com/wmfadel/escape-be/internal/service"
-	"github.com/wmfadel/escape-be/pkg/middlewares"
+	middleware "github.com/wmfadel/escape-be/pkg/middlewares"
 	"github.com/wmfadel/escape-be/pkg/utils"
 )
 
@@ -27,7 +27,7 @@ type DIContainer struct {
 	RegistrationHandler *handlers.RegistrationHandler
 
 	// Middlewares
-	AuthMiddleware *middlewares.AuthMiddleware
+	AuthMiddleware *middleware.AuthMiddleware
 }
 
 // NewDependencies initializes the dependency container
@@ -49,7 +49,7 @@ func NewDependencies(db *sql.DB) *DIContainer {
 	registrationHandler := handlers.NewRegistrationHandler(eventService)
 
 	// Middlewares initialization
-	authMiddleware := middlewares.NewAuthMiddleware(eventService)
+	authMiddleware := middleware.NewAuthMiddleware(eventService)
 
 	return &DIContainer{
 		DB:                  db,
