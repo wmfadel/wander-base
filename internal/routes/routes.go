@@ -15,10 +15,14 @@ func RegisterRoutes(server *gin.Engine, c di.DIContainer) {
 	guardedRoutes := server.Group("/", c.AuthMiddleware.Authenticate)
 
 	guardedRoutes.POST("/users/photo", c.UserHandler.UpdatePhoto)
+
 	// Event Routes
 	guardedRoutes.POST("/events", c.EventHandler.CreateEvent)
 	guardedRoutes.PUT("/events/:id", c.AuthMiddleware.AuthorizeForEventEdits, c.EventHandler.UpdateEvent)
 	guardedRoutes.DELETE("/events/:id", c.AuthMiddleware.AuthorizeForEventEdits, c.EventHandler.DeleteEvent)
+
+	guardedRoutes.POST("/events/photos/:id", c.AuthMiddleware.AuthorizeForEventEdits, c.EventHandler.AddPhotos)
+	guardedRoutes.DELETE("/events/photos/:id", c.AuthMiddleware.AuthorizeForEventEdits, c.EventHandler.DeletePhotos)
 
 	guardedRoutes.POST("events/:id/register", c.RegistrationHandler.RegisterForEvent)
 	guardedRoutes.DELETE("events/:id/register", c.RegistrationHandler.CancelRegistrationEvent)

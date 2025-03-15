@@ -79,6 +79,12 @@ func createTables(db *sql.DB) {
    			FOREIGN KEY (role_id) REFERENCES roles(id),
     		PRIMARY KEY (user_id, role_id)
 		)`,
+		`CREATE TABLE IF NOT EXISTS event_photos (
+			id SERIAL PRIMARY KEY,
+			event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+			photo_url TEXT NOT NULL,
+			uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);`,
 	}
 
 	seedData := []string{

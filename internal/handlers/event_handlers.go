@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"mime/multipart"
 	"net/http"
 	"strconv"
 
@@ -10,34 +11,52 @@ import (
 )
 
 type EventHandler struct {
-	service *service.EventService
+	service      *service.EventService
+	photoService *service.EventPhotoService
 }
 
-func NewEventHandler(service *service.EventService) *EventHandler {
-	return &EventHandler{service: service}
+func NewEventHandler(service *service.EventService, photoService *service.EventPhotoService) *EventHandler {
+	return &EventHandler{service: service, photoService: photoService}
 }
 
-func (h *EventHandler) CreateEvent(context *gin.Context) {
+func (h *EventHandler) CreateEvent(c *gin.Context) {
 	var event models.Event
-	err := context.ShouldBindJSON(&event)
-	if err != nil {
-		context.JSON(http.StatusBadRequest, models.NewESError("Could not parse event", err))
+	// Bind form data to event struct, excluding photos
+	if err := c.ShouldBind(&event); err != nil {
+		c.JSON(http.StatusBadRequest, models.NewESError("Could not parse event", err))
 		return
 	}
 
-	userId := context.GetInt64("userId")
-	event.UserID = userId
-	err = h.service.CreateEvent(&event)
-	if err != nil {
-		context.JSON(http.StatusInternalServerError, models.NewESError("Failed to create event", err))
+	// Get authenticated user ID from context
+	userID, exists := c.Get("userId")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, models.NewESError("User not authenticated", nil))
+		return
+	}
+	event.UserID = userID.(int64)
+
+	// Handle photo uploads separately
+	form, err := c.MultipartForm()
+	var photos []*multipart.FileHeader
+	if err == nil && form != nil {
+		photos = form.File["photos"]
+	}
+
+	// Create event with photos
+	if err := h.service.CreateEvent(&event, photos); err != nil {
+		c.JSON(http.StatusInternalServerError, models.NewESError("Failed to create event", err))
 		return
 	}
 
-	context.JSON(http.StatusCreated, gin.H{
-		"message": "Event created",
-	})
+	// Fetch updated event with photo URLs (optional, if service doesn't populate Photos)
+	updatedEvent, err := h.service.GetEventById(event.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.NewESError("Failed to fetch created event", err))
+		return
+	}
+
+	c.JSON(http.StatusCreated, updatedEvent)
 }
-
 func (h *EventHandler) GetEvent(context *gin.Context) {
 	eventID, err := strconv.ParseInt(context.Param("id"), 10, 64)
 	if err != nil {
@@ -87,6 +106,54 @@ func (h *EventHandler) UpdateEvent(context *gin.Context) {
 	context.JSON(http.StatusOK, gin.H{"message": "Event updated"})
 }
 
+func (h *EventHandler) AddPhotos(c *gin.Context) {
+	eventID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.NewESError("Failed to parse event ID", err))
+		return
+	}
+
+	form, err := c.MultipartForm()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.NewESError("Failed to parse form", err))
+		return
+	}
+	photos := form.File["photos"]
+
+	if err := h.photoService.AddPhotos(eventID, photos); err != nil {
+		c.JSON(http.StatusBadRequest, models.NewESError("Failed to save event photos", err))
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Photos added"})
+}
+
+func (h *EventHandler) DeletePhotos(c *gin.Context) {
+	eventId, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.NewESError("Failed to parse photo ID", err))
+		return
+	}
+	type TempPhotos struct {
+		Photos []string `json:"photos"`
+	}
+
+	var p TempPhotos
+	err = c.ShouldBindJSON(&p)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.NewESError("Missing photo details", err))
+		return
+	}
+	var photos []string
+	photos = append(photos, p.Photos...)
+	err = h.photoService.DeletEventPhotos(eventId, photos)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.NewESError("Failed to delete photo", err))
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Photo deleted"})
+
+}
+
 func (h *EventHandler) DeleteEvent(context *gin.Context) {
 	// Get event from context using the key "event"
 	value, exists := context.Get("event")
@@ -102,7 +169,7 @@ func (h *EventHandler) DeleteEvent(context *gin.Context) {
 		return
 	}
 
-	err := h.service.Delete(event.ID)
+	err := h.service.Delete(event.ID, event.Photos)
 	if err != nil {
 		context.JSON(http.StatusInternalServerError, models.NewESError("Failed to delete event", err))
 		return
