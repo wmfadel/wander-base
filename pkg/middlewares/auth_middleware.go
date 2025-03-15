@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/wmfadel/escape-be/internal/models"
 	"github.com/wmfadel/escape-be/internal/service"
 	"github.com/wmfadel/escape-be/pkg/utils"
 )
@@ -47,18 +48,18 @@ func (amw *AuthMiddleware) AuthorizeForEventEdits(context *gin.Context) {
 	eventId, err := strconv.ParseInt(context.Param("id"), 10, 64)
 
 	if err != nil {
-		context.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("Failed to parse event id: %v", err)})
+		context.AbortWithStatusJSON(http.StatusBadRequest, models.NewESError("Failed to parse event ID", err))
 		return
 	}
 
 	event, err := amw.service.GetEventById(eventId)
 	if err != nil {
-		context.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("Could not find this event: %v", err)})
+		context.AbortWithStatusJSON(http.StatusBadRequest, models.NewESError("Could not find event", err))
 		return
 	}
 	userId := context.GetInt64("userId")
 	if event.UserID != userId {
-		context.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"message": "Not authorized to update this event"})
+		context.AbortWithStatusJSON(http.StatusUnauthorized, models.NewESError("Not authorized", err))
 		return
 	}
 

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 	"github.com/wmfadel/escape-be/pkg/utils"
 )
 
@@ -79,6 +79,12 @@ func createTables(db *sql.DB) {
    			FOREIGN KEY (role_id) REFERENCES roles(id),
     		PRIMARY KEY (user_id, role_id)
 		)`,
+		`CREATE TABLE IF NOT EXISTS event_photos (
+			id SERIAL PRIMARY KEY,
+			event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+			photo_url TEXT NOT NULL,
+			uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);`,
 	}
 
 	seedData := []string{
@@ -95,6 +101,10 @@ func createTables(db *sql.DB) {
 	}
 	for _, data := range seedData {
 		if _, err := db.Exec(data); err != nil {
+			if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
+				continue
+			}
+
 			log.Fatalf("Failed to add seed data to table: %v", err)
 		}
 	}

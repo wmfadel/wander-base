@@ -7,17 +7,19 @@ import (
 	"github.com/wmfadel/escape-be/internal/repository"
 	"github.com/wmfadel/escape-be/internal/service"
 	"github.com/wmfadel/escape-be/pkg/middlewares"
+	"github.com/wmfadel/escape-be/pkg/utils"
 )
 
 // DIContainer holds all shared app dependencies
 type DIContainer struct {
 	// DB
-	DB *sql.DB
-
+	DB      *sql.DB
+	Storage *utils.Storage
 	// Services
-	EventService *service.EventService
-	UserService  *service.UserService
-	RolesService *service.RoleService
+	EventService       *service.EventService
+	UserService        *service.UserService
+	RolesService       *service.RoleService
+	EventPhotosService *service.EventPhotoService
 
 	// Handlers
 	EventHandler        *handlers.EventHandler
@@ -30,16 +32,19 @@ type DIContainer struct {
 
 // NewDependencies initializes the dependency container
 func NewDependencies(db *sql.DB) *DIContainer {
+	storage := utils.NewStorage("http://localhost:8080")
 	// Repositories initialization
-	eventRepo := repository.NewEventRepository(db)
-	userRepo := repository.NewUserRepository(db)
+	eventPhotosRepository := repository.NewEventPhotoRepository(db, storage)
+	eventRepo := repository.NewEventRepository(db, eventPhotosRepository)
+	userRepo := repository.NewUserRepository(db, storage)
 	rolesRepo := repository.NewRoleRepository(db)
 	// Services initialization
-	eventService := service.NewEventService(eventRepo)
+	eventPhotosService := service.NewEventPhotoService(eventPhotosRepository)
+	eventService := service.NewEventService(eventRepo, eventPhotosService)
 	userService := service.NewUserService(userRepo)
 	rolesService := service.NewRoleService(rolesRepo)
 	// Handlers initialization
-	eventHandler := handlers.NewEventHandler(eventService)
+	eventHandler := handlers.NewEventHandler(eventService, eventPhotosService)
 	userHandler := handlers.NewUserHandler(userService)
 	registrationHandler := handlers.NewRegistrationHandler(eventService)
 
@@ -48,6 +53,8 @@ func NewDependencies(db *sql.DB) *DIContainer {
 
 	return &DIContainer{
 		DB:                  db,
+		Storage:             storage,
+		EventPhotosService:  eventPhotosService,
 		EventService:        eventService,
 		UserService:         userService,
 		RolesService:        rolesService,

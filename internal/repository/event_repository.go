@@ -10,11 +10,12 @@ import (
 )
 
 type EventRepository struct {
-	db *sql.DB
+	db        *sql.DB
+	photoRepo *EventPhotoRepository
 }
 
-func NewEventRepository(db *sql.DB) *EventRepository {
-	return &EventRepository{db: db}
+func NewEventRepository(db *sql.DB, photoRepo *EventPhotoRepository) *EventRepository {
+	return &EventRepository{db: db, photoRepo: photoRepo}
 }
 
 func (repo *EventRepository) Save(event *models.Event) error {
@@ -88,18 +89,24 @@ func (repo *EventRepository) GetAllEvents() ([]models.Event, error) {
 	return events, nil
 }
 
-func (repo *EventRepository) GetEventById(eventId int64) (*models.Event, error) {
-	query := "SELECT * FROM events WHERE id = $1"
-	row := repo.db.QueryRow(query, eventId)
-
-	var event = models.Event{}
-	err := row.Scan(&event.ID, &event.Name, &event.Description, &event.Location, &event.DateTime, &event.UserID)
-
+func (repo *EventRepository) GetEventById(id int64) (*models.Event, error) {
+	query := "SELECT id, name, description, location, dateTime, user_id FROM events WHERE id = $1"
+	event := &models.Event{}
+	err := repo.db.QueryRow(query, id).Scan(&event.ID, &event.Name, &event.Description, &event.Location, &event.DateTime, &event.UserID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to scan event after ID query: %w", err)
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("event %d not found", id)
+		}
+		return nil, fmt.Errorf("failed to get event %d: %w", id, err)
 	}
-	// TODO check if event is null and return error
-	return &event, nil
+
+	// Fetch photos
+	photos, err := repo.photoRepo.GetPhotos(id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get photos for event %d: %w", id, err)
+	}
+	event.Photos = photos
+	return event, nil
 }
 
 func (repo *EventRepository) UpdatePartially(eventId int64, patch models.PatchEvent) error {

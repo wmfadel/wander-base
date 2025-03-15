@@ -6,11 +6,12 @@ import (
 )
 
 type EventService struct {
-	repo *repository.EventRepository
+	repo         *repository.EventRepository
+	photoService *EventPhotoService
 }
 
-func NewEventService(repo *repository.EventRepository) *EventService {
-	return &EventService{repo: repo}
+func NewEventService(repo *repository.EventRepository, photoService *EventPhotoService) *EventService {
+	return &EventService{repo: repo, photoService: photoService}
 }
 
 func (s *EventService) CreateEvent(event *models.Event) error {
@@ -28,7 +29,8 @@ func (s *EventService) UpdatePartially(eventId int64, patch models.PatchEvent) e
 	return s.repo.UpdatePartially(eventId, patch)
 }
 
-func (s *EventService) Delete(eventId int64) error {
+func (s *EventService) Delete(eventId int64, photos []string) error {
+	go s.photoService.DeletEventPhotos(eventId, photos)
 	return s.repo.Delete(eventId)
 }
 
