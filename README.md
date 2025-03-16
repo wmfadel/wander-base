@@ -39,7 +39,7 @@ Improve usability with these features:
    - Allows efficient updates via HTTP PATCH.  
    - *Learn*: RESTful API design.
 
-5. **File Upload**  
+5. **File Upload**  ✅
    - Adds event media (e.g., images).  
    - Implement secure uploads in Go.  
    - *Learn*: File handling security.

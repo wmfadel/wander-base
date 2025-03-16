@@ -9,15 +9,15 @@ import (
 	"github.com/wmfadel/escape-be/pkg/utils"
 )
 
-type UserHandler struct {
+type AuthHandler struct {
 	service *service.UserService
 }
 
-func NewUserHandler(service *service.UserService) *UserHandler {
-	return &UserHandler{service: service}
+func NewAuthHandler(service *service.UserService) *AuthHandler {
+	return &AuthHandler{service: service}
 }
 
-func (h *UserHandler) SignupHandler(context *gin.Context) {
+func (h *AuthHandler) SignupHandler(context *gin.Context) {
 	var user models.User
 	err := context.ShouldBindJSON(&user)
 	if err != nil {
@@ -36,7 +36,7 @@ func (h *UserHandler) SignupHandler(context *gin.Context) {
 	})
 }
 
-func (h *UserHandler) LoginHandler(context *gin.Context) {
+func (h *AuthHandler) LoginHandler(context *gin.Context) {
 	var user models.User
 	err := context.ShouldBindJSON(&user)
 	if err != nil {
@@ -62,17 +62,6 @@ func (h *UserHandler) LoginHandler(context *gin.Context) {
 	})
 }
 
-func (h *UserHandler) UpdatePhoto(c *gin.Context) {
-	userId := c.GetInt64("userId") // From auth middleware
-	photo, err := c.FormFile("photo")
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "photo required"})
-		return
-	}
-	url, err := h.service.UpdatePhoto(userId, photo)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"message": "Photo updated", "url": url})
+func (h *AuthHandler) LogoutHandler(context *gin.Context) {
+	context.JSON(http.StatusNotExtended, models.NewESError("Not implemented", nil))
 }

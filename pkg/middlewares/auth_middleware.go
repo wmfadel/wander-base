@@ -73,7 +73,7 @@ func (amw *AuthMiddleware) RequiresAdmin(context *gin.Context) {
 	}
 
 	if !isAdmin {
-		context.AbortWithStatusJSON(http.StatusUnauthorized, models.NewESError("Unauthorized to edit this event", nil))
+		context.AbortWithStatusJSON(http.StatusUnauthorized, models.NewESError("Unauthorized to create/edit events", nil))
 		return
 	}
 	context.Next()

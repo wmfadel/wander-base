@@ -22,8 +22,10 @@ type DIContainer struct {
 	EventPhotosService *service.EventPhotoService
 
 	// Handlers
+	AuthHandler         *handlers.AuthHandler
+	AdminHandler        *handlers.AdmingHandler
+	ProfileHandler      *handlers.ProfileHandler
 	EventHandler        *handlers.EventHandler
-	UserHandler         *handlers.UserHandler
 	RegistrationHandler *handlers.RegistrationHandler
 
 	// Middlewares
@@ -44,8 +46,11 @@ func NewDependencies(db *sql.DB) *DIContainer {
 	userService := service.NewUserService(userRepo, rolesRepo)
 	rolesService := service.NewRoleService(rolesRepo)
 	// Handlers initialization
+
+	authHandler := handlers.NewAuthHandler(userService)
+	adminHandler := handlers.NewAdmingHandler(userService)
+	profileHandler := handlers.NewProfileHandler(userService)
 	eventHandler := handlers.NewEventHandler(eventService, eventPhotosService)
-	userHandler := handlers.NewUserHandler(userService)
 	registrationHandler := handlers.NewRegistrationHandler(eventService)
 
 	// Middlewares initialization
@@ -58,8 +63,10 @@ func NewDependencies(db *sql.DB) *DIContainer {
 		EventService:        eventService,
 		UserService:         userService,
 		RolesService:        rolesService,
+		AuthHandler:         authHandler,
+		AdminHandler:        adminHandler,
+		ProfileHandler:      profileHandler,
 		EventHandler:        eventHandler,
-		UserHandler:         userHandler,
 		RegistrationHandler: registrationHandler,
 		AuthMiddleware:      authMiddleware,
 	}

@@ -3,19 +3,18 @@ package routes
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/wmfadel/escape-be/internal/di"
-	middleware "github.com/wmfadel/escape-be/pkg/middlewares"
 )
 
-func RegisterEventRoutes(r *gin.Engine, c di.DIContainer, authMW *middleware.AuthMiddleware) {
+func RegisterEventRoutes(r *gin.Engine, c di.DIContainer) {
 	// Public event routes
 	r.GET("/events", c.EventHandler.GetEvents)
 	r.GET("/events/:id", c.EventHandler.GetEvent)
 
 	// Guarded event routes (require authentication)
-	guarded := r.Group("/", authMW.Authenticate)
+	guarded := r.Group("/", c.AuthMiddleware.Authenticate)
 
 	// Event edit routes (require authentication + authorization)
-	editGuarded := guarded.Group("/", authMW.RequiresAdmin)
+	editGuarded := guarded.Group("/", c.AuthMiddleware.RequiresAdmin)
 	editGuarded.POST("/events", c.EventHandler.CreateEvent)
 	editGuarded.PUT("/events/:id", c.EventHandler.UpdateEvent)
 	editGuarded.DELETE("/events/:id", c.EventHandler.DeleteEvent)
