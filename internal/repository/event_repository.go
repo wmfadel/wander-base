@@ -185,6 +185,7 @@ func (repo *EventRepository) executeUpdateQuery(query string, values []interface
 
 	return nil
 }
+
 func (repo *EventRepository) Register(userId, eventId int64) error {
 	query := "INSERT INTO registrations (event_id, user_id) VALUES ($1, $2)"
 	stmt, err := repo.db.Prepare(query)
