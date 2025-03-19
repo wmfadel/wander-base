@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"mime/multipart"
+	"strings"
 
 	"github.com/wmfadel/escape-be/internal/models"
 	"github.com/wmfadel/escape-be/pkg/utils"
@@ -57,19 +58,20 @@ func (repo *UserRepository) GetUserByID(id int64) (*models.User, error) {
 
 	return user, nil
 }
-func (repo *UserRepository) ValidateCredintials(user *models.User) error {
+
+func (repo *UserRepository) ValidateCredintials(loginRequest *models.LoginRequest) error {
 	query := "SELECT id, password FROM users WHERE Phone = $1"
 
-	row := repo.db.QueryRow(query, user.Phone)
+	row := repo.db.QueryRow(query, loginRequest.Phone)
 	var storedPassword string
 
-	err := row.Scan(&user.ID, &storedPassword)
+	err := row.Scan(&loginRequest.ID, &storedPassword)
 
 	if err != nil {
 		return fmt.Errorf("failed to find user, wrong credintials: %w", err)
 	}
 
-	isValidPassword := utils.CheckPasswordHash(user.Password, storedPassword)
+	isValidPassword := utils.CheckPasswordHash(loginRequest.Password, storedPassword)
 
 	if !isValidPassword {
 		return fmt.Errorf("invalid password, compared request password hash to existing password: %w", err)
@@ -114,4 +116,71 @@ func (repo *UserRepository) AddPhoto(user *models.User, photo *multipart.FileHea
 
 	user.Photo = url
 	return url, nil
+}
+
+func (repo *UserRepository) UpdatePartially(userId int64, patch models.PatchUser) error {
+
+	if patch.IsEmpty() {
+		return fmt.Errorf("no fields provided for update")
+	}
+
+	query, values, err := repo.buildUpdateQuery(userId, patch)
+	if err != nil {
+		return err // Already wrapped with context
+	}
+
+	return repo.executeUpdateQuery(query, values)
+}
+
+// BuildUpdateQuery constructs the SQL query and values for the partial update
+func (repo *UserRepository) buildUpdateQuery(id int64, patch models.PatchUser) (string, []interface{}, error) {
+	var setClauses []string
+	var values []interface{}
+	paramIndex := 1
+
+	// Build SET clauses and values for non-nil fields
+	if patch.FirstName != nil {
+		setClauses = append(setClauses, fmt.Sprintf("first_name = $%d", paramIndex))
+		values = append(values, *patch.FirstName)
+		paramIndex++
+	}
+	if patch.LastName != nil {
+		setClauses = append(setClauses, fmt.Sprintf("last_name = $%d", paramIndex))
+		values = append(values, *patch.LastName)
+		paramIndex++
+	}
+
+	if len(setClauses) == 0 {
+		return "", nil, fmt.Errorf("no fields provided for update")
+	}
+
+	// Construct the query
+	query := "UPDATE users SET " + strings.Join(setClauses, ", ") + " WHERE id = $" + fmt.Sprintf("%d", paramIndex)
+	values = append(values, id)
+
+	return query, values, nil
+}
+
+// ExecuteUpdateQuery executes the provided SQL query with the given values
+func (repo *UserRepository) executeUpdateQuery(query string, values []interface{}) error {
+	stmt, err := repo.db.Prepare(query)
+	if err != nil {
+		return fmt.Errorf("failed to prepare update query: %w", err)
+	}
+	defer stmt.Close()
+
+	result, err := stmt.Exec(values...)
+	if err != nil {
+		return fmt.Errorf("failed to execute update query: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("no event found")
+	}
+
+	return nil
 }

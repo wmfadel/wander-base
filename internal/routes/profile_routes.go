@@ -6,9 +6,9 @@ import (
 )
 
 func RegisterProfileRoutes(r *gin.Engine, c di.DIContainer) {
-	r.Group("/users", c.AuthMiddleware.Authenticate)
+	guarded := r.Group("/", c.AuthMiddleware.Authenticate)
 	// Public event routes
-	r.GET("/", c.ProfileHandler.GetProfile)        // Get Profile // TODO add correct handler
-	r.PUT("/", c.ProfileHandler.UpdateProfile)     // Update Profile // TODO add correct handler
-	r.POST("/photo", c.ProfileHandler.UpdatePhoto) // Update Profile
+	guarded.GET("/users", c.ProfileHandler.GetProfile)    // Get Profile
+	guarded.PUT("/users", c.ProfileHandler.UpdateProfile) // Update Profile
+	guarded.POST("/photo", c.ProfileHandler.UpdatePhoto)  // Update Profile
 }

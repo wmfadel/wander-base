@@ -37,20 +37,20 @@ func (h *AuthHandler) SignupHandler(context *gin.Context) {
 }
 
 func (h *AuthHandler) LoginHandler(context *gin.Context) {
-	var user models.User
-	err := context.ShouldBindJSON(&user)
+	var loginRequest models.LoginRequest
+	err := context.ShouldBindJSON(&loginRequest)
 	if err != nil {
 		context.JSON(http.StatusBadRequest, models.NewESError("Could not parse user", err))
 		return
 	}
 
-	err = h.service.ValidateCredintials(&user)
+	err = h.service.ValidateCredintials(&loginRequest)
 	if err != nil {
 		context.JSON(http.StatusUnauthorized, models.NewESError("Cannot verify identity", err))
 		return
 	}
 
-	token, err := utils.GernerateToken(user.Phone, user.ID)
+	token, err := utils.GernerateToken(loginRequest.Phone, loginRequest.ID)
 	if err != nil {
 		context.JSON(http.StatusInternalServerError, models.NewESError("Cannot create token", err))
 		return
