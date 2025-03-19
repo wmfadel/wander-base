@@ -11,8 +11,8 @@ import (
 )
 
 func main() {
-	migrate := flag.Bool("migrate", false, "Run database migrations")
-	seed := flag.Bool("seed", false, "Seed database with initial data")
+	migrate := flag.Bool("migrate", true, "Run database migrations")
+	seed := flag.Bool("seed", true, "Seed database with initial data")
 	flag.Parse()
 
 	err := utils.LoadEnv()
