@@ -417,3 +417,22 @@ func (repo *RoleRepository) PatchAssignRoleToUsers(userIDs []any, roleId int64) 
 
 	return nil
 }
+
+func (repo *RoleRepository) DeleteUserRoles(userId int64) error {
+
+	query := "DELETE FROM user_roles WHERE user_id = $1"
+	stmt, err := repo.db.Prepare(query)
+
+	if err != nil {
+		return fmt.Errorf("failed to prepare query for deleting user roles: %w", err)
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(userId)
+
+	if err != nil {
+		return fmt.Errorf("failed to execute query for deleting user roles: %w", err)
+	}
+
+	return nil
+}

@@ -205,3 +205,20 @@ func (h *AdmingHandler) PatchAssignRoleToUsers(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Role assigned to users"})
 
 }
+
+func (h *AdmingHandler) BlockUser(c *gin.Context) {
+	userId, err := strconv.ParseInt(c.Param("id"), 10, 64)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.NewESError("Failed to parse user ID", err))
+		return
+	}
+
+	err = h.RolesService.DeleteUserRoles(userId)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.NewESError("failed to bloc user", err))
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "user blocked"})
+
+}

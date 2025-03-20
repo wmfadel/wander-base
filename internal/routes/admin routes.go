@@ -13,7 +13,7 @@ func RegisterAdminRoutes(r *gin.Engine, c di.DIContainer) {
 	guared.GET("/organizers", handler.GetAllOrganizers) // lists organizers
 	guared.POST("/create", handler.AddRole)             // creates a new role
 	guared.POST("/delete", handler.DeleteRole)          // deletes a role
-	// guared.POST("/block", handler.BlockUser)
+	guared.POST("/block", handler.BlockUser)            // blocks a user
 	guared.POST("/roles", handler.AssignRoleToUser)     // assigns a role to a user
 	guared.DELETE("/roles", handler.RemoveRoleFromUser) // removes a role from a user
 

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"mime/multipart"
 
 	"github.com/wmfadel/escape-be/internal/models"
@@ -20,7 +21,15 @@ func NewUserService(repo *repository.UserRepository, rolesRepo *repository.RoleR
 }
 
 func (s *UserService) Create(user *models.User) error {
-	return s.repo.Create(user)
+	user, err := s.repo.Create(user)
+	if err != nil {
+		return err
+	}
+	err = s.rolesRepo.AssignRoleToUser(user.ID, 4)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *UserService) GetUserByID(id int64) (*models.User, error) {
@@ -32,6 +41,10 @@ func (s *UserService) GetUserByID(id int64) (*models.User, error) {
 	user.Roles, err = s.rolesRepo.GetRolesByUserId(id)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(user.Roles) == 0 {
+		return nil, errors.New("user blocked, assign \"user\" role to unblock")
 	}
 	return user, nil
 }
