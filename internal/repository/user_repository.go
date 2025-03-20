@@ -19,31 +19,31 @@ func NewUserRepository(db *sql.DB, storage *utils.Storage) *UserRepository {
 	return &UserRepository{db: db, storage: storage}
 }
 
-func (repo *UserRepository) Create(user *models.User) error {
+func (repo *UserRepository) Create(user *models.User) (*models.User, error) {
 	query := "INSERT INTO users (phone, password) VALUES ($1, $2) RETURNING id"
 
 	// Prepare the statement
 	stmt, err := repo.db.Prepare(query)
 	if err != nil {
-		return fmt.Errorf("failed to prepare query for saving user %w", err)
+		return nil, fmt.Errorf("failed to prepare query for saving user %w", err)
 	}
 	defer stmt.Close()
 
 	// Hash the password
 	hashedPassword, err := utils.HashPassword(user.Password)
 	if err != nil {
-		return fmt.Errorf("failed to hash user password %w", err)
+		return nil, fmt.Errorf("failed to hash user password %w", err)
 	}
 
 	// Execute the query and retrieve the ID
 	var userID int64
 	err = stmt.QueryRow(user.Phone, hashedPassword).Scan(&userID)
 	if err != nil {
-		return fmt.Errorf("failed to execute query for saving user %w", err)
+		return nil, fmt.Errorf("failed to execute query for saving user %w", err)
 	}
 	// Set the user's ID
 	user.ID = userID
-	return nil
+	return user, nil
 }
 
 func (repo *UserRepository) GetUserByID(id int64) (*models.User, error) {
