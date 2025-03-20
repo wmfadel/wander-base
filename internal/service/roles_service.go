@@ -53,6 +53,6 @@ func (s *RoleService) DeleteRole(roleId int64) error {
 	return s.repo.DeleteRole(roleId)
 }
 
-func (s *RoleService) PatchAssignRoleToUsers(users []models.User, roleId int64) error {
+func (s *RoleService) PatchAssignRoleToUsers(users []any, roleId int64) error {
 	return s.repo.PatchAssignRoleToUsers(users, roleId)
 }

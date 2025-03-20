@@ -26,9 +26,9 @@ func (repo *RoleRepository) GetAllRoles() ([]models.Role, error) {
 	defer stmt.Close()
 
 	var roles []models.Role
-	rows, err := stmt.Query(query)
+	rows, err := stmt.Query()
 	if err != nil {
-		return nil, fmt.Errorf("failed to prepare query for roles: %w", err)
+		return nil, fmt.Errorf("failed to query for roles: %w", err)
 	}
 
 	for rows.Next() {
@@ -222,13 +222,18 @@ func (repo *RoleRepository) GetUsersByRoleId(roleId int64) ([]models.User, error
 		return nil, fmt.Errorf("failed to execute query for getting users by role: %w", err)
 	}
 
-	var users []models.User
+	var users = []models.User{}
 	for rows.Next() {
 		var user models.User
-		err := rows.Scan(&user.ID, &user.Phone, &user.Password)
+		err := rows.Scan(&user.ID, &user.Phone, &user.Password, &user.FirstName, &user.LastName)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan user value: %w", err)
 		}
+		// TODO: remove passwords from user responses
+		user.Password = "******"
+		roles, _ := repo.GetRolesByUserId(user.ID)
+		user.Roles = roles
+
 		users = append(users, user)
 	}
 
@@ -308,8 +313,13 @@ func (repo *RoleRepository) DeleteRole(roleId int64) error {
 		return fmt.Errorf("failed to get users with only this role: %w", err)
 	}
 
+	userIds := make([]any, len(users))
+	for i, user := range users {
+		userIds[i] = user.ID
+	}
+
 	if len(users) > 0 {
-		err = repo.PatchAssignRoleToUsers(users, defaultRole.ID)
+		err = repo.PatchAssignRoleToUsers(userIds, defaultRole.ID)
 		if err != nil {
 			return fmt.Errorf("failed to migrate all users from this role: %w", err)
 		}
@@ -372,19 +382,13 @@ func (repo *RoleRepository) usersWithOnlyThisRole(roleId int64) ([]models.User, 
 
 }
 
-func (repo *RoleRepository) PatchAssignRoleToUsers(users []models.User, roleId int64) error {
-	if len(users) == 0 {
+func (repo *RoleRepository) PatchAssignRoleToUsers(userIDs []any, roleId int64) error {
+	if len(userIDs) == 0 {
 		return nil // Nothing to do
 	}
 
-	// Build a list of user IDs
-	userIDs := make([]interface{}, len(users))
-	for i, user := range users {
-		userIDs[i] = user.ID
-	}
-
 	// Construct the placeholders for the VALUES clause
-	placeholders := make([]string, len(users))
+	placeholders := make([]string, len(userIDs))
 	for i := range placeholders {
 		placeholders[i] = fmt.Sprintf("$%d", i+1)
 	}
@@ -394,7 +398,7 @@ func (repo *RoleRepository) PatchAssignRoleToUsers(users []models.User, roleId i
         INSERT INTO user_roles (user_id, role_id)
         SELECT u.user_id, $%d
         FROM (VALUES %s) AS u(user_id)
-        ON CONFLICT (user_id, role_id) DO NOTHING`, len(users)+1, strings.Join(placeholders, ","))
+        ON CONFLICT (user_id, role_id) DO NOTHING`, len(userIDs)+1, strings.Join(placeholders, ","))
 
 	// Append the role ID to the parameters
 	params := append(userIDs, roleId)
