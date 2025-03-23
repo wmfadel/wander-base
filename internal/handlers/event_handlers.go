@@ -80,7 +80,6 @@ func (h *EventHandler) UpdateEvent(context *gin.Context) {
 	}
 
 	var patchEvent models.PatchEvent
-	var updatedEvent models.Event
 
 	err = context.ShouldBindJSON(&patchEvent)
 	if err != nil {
@@ -88,7 +87,6 @@ func (h *EventHandler) UpdateEvent(context *gin.Context) {
 		return
 	}
 
-	updatedEvent.ID = eventId
 	err = h.service.UpdatePartially(eventId, patchEvent)
 	if err != nil {
 		context.JSON(http.StatusInternalServerError, models.NewESError("Failed to update event", err))

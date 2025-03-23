@@ -27,14 +27,26 @@ func (h *ProfileHandler) GetProfile(c *gin.Context) {
 }
 
 func (h *ProfileHandler) UpdateProfile(c *gin.Context) {
-	_, err := utils.GetUserFromContext(c)
+	user, err := utils.GetUserFromContext(c)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, models.NewESError("Failed to get user from context", err))
 		return
 	}
+	var patch models.PatchUser
+	err = c.ShouldBindJSON(&patch)
 
-	c.JSON(http.StatusNotFound, models.NewESError("This action is not supported yet", nil))
+	if err != nil || patch.IsEmpty() {
+		c.JSON(http.StatusBadRequest, models.NewESError("Invalid request body", err))
+		return
+	}
+
+	err = h.UserService.UpdateUser(user, &patch)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.NewESError("Failed to update user", err))
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "User updated", "user": user})
 
 }
 
@@ -42,12 +54,12 @@ func (h *ProfileHandler) UpdatePhoto(c *gin.Context) {
 	userId := c.GetInt64("userId") // From auth middleware
 	photo, err := c.FormFile("photo")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "photo required"})
+		c.JSON(http.StatusBadRequest, models.NewESError("photo required", err))
 		return
 	}
 	url, err := h.UserService.UpdatePhoto(userId, photo)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, models.NewESError("Failed to update photo", err))
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Photo updated", "url": url})

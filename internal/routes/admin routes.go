@@ -6,14 +6,15 @@ import (
 )
 
 func RegisterAdminRoutes(r *gin.Engine, c di.DIContainer) {
-	r.Group("/admin", c.AuthMiddleware.Authenticate, c.AuthMiddleware.RequiresAdmin)
+	guared := r.Group("/admin", c.AuthMiddleware.Authenticate, c.AuthMiddleware.RequiresAdmin)
 	handler := c.AdminHandler
-	r.GET("/all", handler.GetAllAdmins)
-	r.GET("/organizers", handler.GetAllOrganizers)
-	r.POST("/create", handler.CreateUser)
-	r.POST("/delete", handler.DeleteUser)
-	r.POST("/block", handler.BlockUser)
-	r.POST("/roles", handler.AddRoleToUser)
-	r.DELETE("/roles", handler.RemoveRoleFromUser)
+	guared.GET("/all", handler.GetAllRoles)             // lists all roles
+	guared.GET("/admins", handler.GetAllAdmins)         // lists admins
+	guared.GET("/organizers", handler.GetAllOrganizers) // lists organizers
+	guared.POST("/create", handler.AddRole)             // creates a new role
+	guared.POST("/delete", handler.DeleteRole)          // deletes a role
+	guared.POST("/block", handler.BlockUser)            // blocks a user
+	guared.POST("/roles", handler.AssignRoleToUser)     // assigns a role to a user
+	guared.DELETE("/roles", handler.RemoveRoleFromUser) // removes a role from a user
 
 }

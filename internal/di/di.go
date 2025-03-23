@@ -48,7 +48,7 @@ func NewDependencies(db *sql.DB) *DIContainer {
 	// Handlers initialization
 
 	authHandler := handlers.NewAuthHandler(userService)
-	adminHandler := handlers.NewAdmingHandler(userService)
+	adminHandler := handlers.NewAdmingHandler(rolesService, userService)
 	profileHandler := handlers.NewProfileHandler(userService)
 	eventHandler := handlers.NewEventHandler(eventService, eventPhotosService)
 	registrationHandler := handlers.NewRegistrationHandler(eventService)

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"mime/multipart"
 
 	"github.com/wmfadel/wander-base/internal/models"
@@ -20,7 +21,15 @@ func NewUserService(repo *repository.UserRepository, rolesRepo *repository.RoleR
 }
 
 func (s *UserService) Create(user *models.User) error {
-	return s.repo.Create(user)
+	user, err := s.repo.Create(user)
+	if err != nil {
+		return err
+	}
+	err = s.rolesRepo.AssignRoleToUser(user.ID, 4)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *UserService) GetUserByID(id int64) (*models.User, error) {
@@ -33,13 +42,31 @@ func (s *UserService) GetUserByID(id int64) (*models.User, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	if len(user.Roles) == 0 {
+		return nil, errors.New("user blocked, assign \"user\" role to unblock")
+	}
 	return user, nil
 }
-func (s *UserService) ValidateCredintials(user *models.User) error {
-	return s.repo.ValidateCredintials(user)
+func (s *UserService) ValidateCredintials(loginRequest *models.LoginRequest) error {
+	return s.repo.ValidateCredintials(loginRequest)
 }
 
 func (s *UserService) UpdatePhoto(userId int64, photo *multipart.FileHeader) (string, error) {
 	user := &models.User{ID: userId}
 	return s.repo.AddPhoto(user, photo)
+}
+
+func (s *UserService) UpdateUser(user *models.User, patch *models.PatchUser) error {
+	err := s.repo.UpdatePartially(user.ID, *patch)
+	if err != nil {
+		return err
+	}
+	patch.Apply(user)
+	roles, err := s.rolesRepo.GetRolesByUserId(user.ID)
+	if err != nil {
+		return err
+	}
+	user.Roles = roles
+	return nil
 }

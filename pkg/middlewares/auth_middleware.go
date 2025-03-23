@@ -46,9 +46,14 @@ func (amw *AuthMiddleware) Authenticate(context *gin.Context) {
 	user, err := amw.userService.GetUserByID(userId)
 
 	if err != nil || user == nil {
-		context.AbortWithStatusJSON(http.StatusUnauthorized, models.NewESError("user not found", err))
+		if err.Error() == "user blocked, assign \"user\" role to unblock" {
+			context.AbortWithStatusJSON(http.StatusUnauthorized, models.NewESError("user blocked, assign \"user\" role to unblock", err))
+		} else {
+			context.AbortWithStatusJSON(http.StatusUnauthorized, models.NewESError("user not found", err))
+		}
 		return
 	}
+
 	log.Printf("user in middleware: %v", user)
 	context.Set("userId", userId)
 	context.Set("user", *user)
