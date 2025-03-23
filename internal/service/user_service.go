@@ -4,8 +4,8 @@ import (
 	"errors"
 	"mime/multipart"
 
-	"github.com/wmfadel/escape-be/internal/models"
-	"github.com/wmfadel/escape-be/internal/repository"
+	"github.com/wmfadel/wander-base/internal/models"
+	"github.com/wmfadel/wander-base/internal/repository"
 )
 
 type UserService struct {

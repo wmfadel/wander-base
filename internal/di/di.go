@@ -3,11 +3,11 @@ package di
 import (
 	"database/sql"
 
-	"github.com/wmfadel/escape-be/internal/handlers"
-	"github.com/wmfadel/escape-be/internal/repository"
-	"github.com/wmfadel/escape-be/internal/service"
-	middleware "github.com/wmfadel/escape-be/pkg/middlewares"
-	"github.com/wmfadel/escape-be/pkg/utils"
+	"github.com/wmfadel/wander-base/internal/handlers"
+	"github.com/wmfadel/wander-base/internal/repository"
+	"github.com/wmfadel/wander-base/internal/service"
+	middleware "github.com/wmfadel/wander-base/pkg/middlewares"
+	"github.com/wmfadel/wander-base/pkg/utils"
 )
 
 // DIContainer holds all shared app dependencies

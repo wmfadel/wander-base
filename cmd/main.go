@@ -4,10 +4,10 @@ import (
 	"flag"
 
 	"github.com/gin-gonic/gin"
-	"github.com/wmfadel/escape-be/db"
-	"github.com/wmfadel/escape-be/internal/di"
-	"github.com/wmfadel/escape-be/internal/routes"
-	"github.com/wmfadel/escape-be/pkg/utils"
+	"github.com/wmfadel/wander-base/db"
+	"github.com/wmfadel/wander-base/internal/di"
+	"github.com/wmfadel/wander-base/internal/routes"
+	"github.com/wmfadel/wander-base/pkg/utils"
 )
 
 func main() {

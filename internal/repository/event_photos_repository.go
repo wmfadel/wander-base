@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/lib/pq"
-	"github.com/wmfadel/escape-be/pkg/utils"
+	"github.com/wmfadel/wander-base/pkg/utils"
 )
 
 type EventPhotoRepository struct {

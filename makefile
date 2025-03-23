@@ -8,3 +8,4 @@ migrate:
 
 seed:
 	go run cmd/main.go --seed
+

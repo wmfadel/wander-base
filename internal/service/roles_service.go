@@ -1,8 +1,8 @@
 package service
 
 import (
-	"github.com/wmfadel/escape-be/internal/models"
-	"github.com/wmfadel/escape-be/internal/repository"
+	"github.com/wmfadel/wander-base/internal/models"
+	"github.com/wmfadel/wander-base/internal/repository"
 )
 
 type RoleService struct {

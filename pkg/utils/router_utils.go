@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/gin-gonic/gin"
-	"github.com/wmfadel/escape-be/internal/models"
+	"github.com/wmfadel/wander-base/internal/models"
 )
 
 func GetUserFromContext(context *gin.Context) (*models.User, error) {

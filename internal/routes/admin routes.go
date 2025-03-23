@@ -2,7 +2,7 @@ package routes
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/wmfadel/escape-be/internal/di"
+	"github.com/wmfadel/wander-base/internal/di"
 )
 
 func RegisterAdminRoutes(r *gin.Engine, c di.DIContainer) {

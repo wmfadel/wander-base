@@ -4,9 +4,9 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/wmfadel/escape-be/internal/models"
-	"github.com/wmfadel/escape-be/internal/service"
-	"github.com/wmfadel/escape-be/pkg/utils"
+	"github.com/wmfadel/wander-base/internal/models"
+	"github.com/wmfadel/wander-base/internal/service"
+	"github.com/wmfadel/wander-base/pkg/utils"
 )
 
 type ProfileHandler struct {

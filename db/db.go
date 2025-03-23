@@ -9,7 +9,7 @@ import (
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/lib/pq"
-	"github.com/wmfadel/escape-be/pkg/utils"
+	"github.com/wmfadel/wander-base/pkg/utils"
 )
 
 func InitDB(migrate, seed bool) *sql.DB {

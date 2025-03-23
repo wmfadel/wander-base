@@ -6,8 +6,8 @@ import (
 	"mime/multipart"
 	"strings"
 
-	"github.com/wmfadel/escape-be/internal/models"
-	"github.com/wmfadel/escape-be/pkg/utils"
+	"github.com/wmfadel/wander-base/internal/models"
+	"github.com/wmfadel/wander-base/pkg/utils"
 )
 
 type UserRepository struct {

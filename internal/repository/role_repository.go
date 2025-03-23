@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/wmfadel/escape-be/internal/models"
+	"github.com/wmfadel/wander-base/internal/models"
 )
 
 type RoleRepository struct {

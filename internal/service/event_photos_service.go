@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"mime/multipart"
 
-	"github.com/wmfadel/escape-be/internal/repository"
+	"github.com/wmfadel/wander-base/internal/repository"
 )
 
 type EventPhotoService struct {
