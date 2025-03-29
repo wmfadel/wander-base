@@ -1,4 +1,4 @@
-package models
+package requests
 
 type PatchUserRoleRequest struct {
 	UserIds []any `json:"user_ids" binding:"required"`

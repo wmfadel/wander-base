@@ -1,4 +1,4 @@
-package models
+package requests
 
 type UserRoleRequest struct {
 	UserId int64 `json:"user_id" binding:"required"`

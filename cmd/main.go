@@ -12,7 +12,7 @@ import (
 
 func main() {
 	migrate := flag.Bool("migrate", false, "Run database migrations")
-	seed := flag.Bool("seed", false, "Seed database with initial data")
+	seed := flag.Bool("seed", false, "Run database seeder")
 	flag.Parse()
 
 	err := utils.LoadEnv()

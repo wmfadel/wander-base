@@ -1,73 +1,71 @@
 package repository
 
 import (
-	"database/sql"
 	"fmt"
+	"log"
 	"mime/multipart"
-	"strings"
 
-	"github.com/lib/pq"
+	"github.com/wmfadel/wander-base/internal/models"
 	"github.com/wmfadel/wander-base/pkg/utils"
+	"gorm.io/gorm"
 )
 
 type EventPhotoRepository struct {
-	db      *sql.DB
+	db      *gorm.DB
 	storage *utils.Storage
 }
 
-func NewEventPhotoRepository(db *sql.DB, storage *utils.Storage) *EventPhotoRepository {
+func NewEventPhotoRepository(db *gorm.DB, storage *utils.Storage) *EventPhotoRepository {
 	return &EventPhotoRepository{db: db, storage: storage}
 }
 
 func (repo *EventPhotoRepository) AddPhotos(eventID int64, photos []*multipart.FileHeader) error {
-	query := "INSERT INTO event_photos (event_id, photo_url) VALUES ($1, $2)"
-	stmt, err := repo.db.Prepare(query)
-	if err != nil {
-		return fmt.Errorf("failed to prepare query for adding event photos: %w", err)
-	}
-	defer stmt.Close()
+	var eventPhotos []models.EventPhoto
+	var uploadErrors []error
 
+	// Process each photo, collecting successful uploads and logging failures
 	for _, photo := range photos {
 		url, err := repo.storage.UploadFile(photo, "events", eventID)
 		if err != nil {
-			return fmt.Errorf("failed to upload photo: %w", err)
+			// Log the error and continue
+			log.Printf("Failed to upload photo for event %d: %v", eventID, err)
+			uploadErrors = append(uploadErrors, fmt.Errorf("failed to upload photo: %w", err))
+			continue
 		}
 
-		_, err = stmt.Exec(eventID, url)
-		if err != nil {
-			if pqErr, ok := err.(*pq.Error); ok {
-				switch pqErr.Code {
-				case "23503": // foreign_key_violation
-					return fmt.Errorf("event %d does not exist: %w", eventID, err)
-				default:
-					return fmt.Errorf("database error (code %s): %w", pqErr.Code, err)
-				}
-			}
-			return fmt.Errorf("failed to add photo to event %d: %w", eventID, err)
+		// Add successful upload to the list
+		eventPhotos = append(eventPhotos, models.EventPhoto{
+			EventID: eventID,
+			URL:     url,
+		})
+	}
+
+	// If no photos were successfully uploaded, return an error with details
+	if len(eventPhotos) == 0 && len(uploadErrors) > 0 {
+		return fmt.Errorf("no photos uploaded successfully: %v errors occurred", len(uploadErrors))
+	}
+
+	// Save successfully uploaded photos to the database
+	if len(eventPhotos) > 0 {
+		if err := repo.db.Create(&eventPhotos).Error; err != nil {
+			return fmt.Errorf("failed to create event photos: %w", err)
 		}
 	}
+
+	// If there were upload errors but some successes, log a warning but don’t fail
+	if len(uploadErrors) > 0 {
+		log.Printf("Partial success: %d photos uploaded, %d failed for event %d", len(eventPhotos), len(uploadErrors), eventID)
+		// Optionally return nil or a custom error with details
+		return nil // Proceed as success since some photos were added
+	}
+
 	return nil
 }
 
-func (repo *EventPhotoRepository) GetPhotos(eventID int64) ([]string, error) {
-	query := "SELECT photo_url FROM event_photos WHERE event_id = $1"
-	rows, err := repo.db.Query(query, eventID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query photos for event %d: %w", eventID, err)
-	}
-	defer rows.Close()
+func (repo *EventPhotoRepository) GetPhotos(eventID int64) ([]models.EventPhoto, error) {
+	var photos []models.EventPhoto
+	repo.db.Where("event_id = ?", eventID).Find(&photos)
 
-	var photos []string
-	for rows.Next() {
-		var url string
-		if err := rows.Scan(&url); err != nil {
-			return nil, fmt.Errorf("failed to scan photo URL: %w", err)
-		}
-		photos = append(photos, url)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating photo rows: %w", err)
-	}
 	return photos, nil
 }
 
@@ -76,46 +74,24 @@ func (repo *EventPhotoRepository) DeletePhotos(eventID int64, urls []string) err
 		return nil // Nothing to delete
 	}
 
-	// Prepare query with dynamic placeholders for URLs
-	placeholders := make([]string, len(urls))
-	args := make([]interface{}, len(urls)+1)
-	args[0] = eventID
-	for i, url := range urls {
-		placeholders[i] = fmt.Sprintf("$%d", i+2) // $2, $3, etc.
-		args[i+1] = url
-	}
-	query := fmt.Sprintf("DELETE FROM event_photos WHERE event_id = $1 AND photo_url IN (%s)",
-		strings.Join(placeholders, ","))
-
-	// Execute deletion from database
-	result, err := repo.db.Exec(query, args...)
-	if err != nil {
-		if pqErr, ok := err.(*pq.Error); ok {
-			switch pqErr.Code {
-			case "23503": // foreign_key_violation (unlikely here due to CASCADE)
-				return fmt.Errorf("event %d does not exist: %w", eventID, err)
-			default:
-				return fmt.Errorf("database error (code %s): %w", pqErr.Code, err)
-			}
-		}
-		return fmt.Errorf("failed to delete photos from event %d: %w", eventID, err)
+	// Delete from database using GORM
+	result := repo.db.Where("event_id = ? AND photo_url IN ?", eventID, urls).Delete(&models.EventPhoto{})
+	if result.Error != nil {
+		return fmt.Errorf("failed to delete photos from event %d: %w", eventID, result.Error)
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("failed to check rows affected: %w", err)
-	}
-
-	// Delete files from filesystem
-	for _, url := range urls {
-		if err := repo.storage.DeleteFile(url); err != nil {
-			fmt.Printf("warning: failed to delete file %s: %v\n", url, err)
-			// Continue despite failure—DB is already updated
-		}
-	}
-
+	// Check if any rows were affected
+	rowsAffected := result.RowsAffected
 	if rowsAffected == 0 {
 		return fmt.Errorf("no photos found for event %d matching provided URLs", eventID)
+	}
+
+	// Delete files from storage, ignoring failures
+	for _, url := range urls {
+		if err := repo.storage.DeleteFile(url); err != nil {
+			log.Printf("Warning: failed to delete file %s from storage: %v", url, err)
+			// Continue despite failure—DB is already updated
+		}
 	}
 
 	return nil

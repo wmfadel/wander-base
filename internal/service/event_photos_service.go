@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"mime/multipart"
 
+	"github.com/wmfadel/wander-base/internal/models"
 	"github.com/wmfadel/wander-base/internal/repository"
 )
 
@@ -22,7 +23,7 @@ func (s *EventPhotoService) AddPhotos(eventID int64, photos []*multipart.FileHea
 	return s.repo.AddPhotos(eventID, photos)
 }
 
-func (s *EventPhotoService) GetPhotos(eventID int64) ([]string, error) {
+func (s *EventPhotoService) GetPhotos(eventID int64) ([]models.EventPhoto, error) {
 	return s.repo.GetPhotos(eventID)
 }
 
