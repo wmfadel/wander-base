@@ -5,6 +5,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/wmfadel/wander-base/internal/models"
+	"github.com/wmfadel/wander-base/internal/models/core"
+	"github.com/wmfadel/wander-base/internal/models/requests"
 	"github.com/wmfadel/wander-base/internal/service"
 	"github.com/wmfadel/wander-base/pkg/utils"
 )
@@ -21,13 +23,13 @@ func (h *AuthHandler) SignupHandler(context *gin.Context) {
 	var user models.User
 	err := context.ShouldBindJSON(&user)
 	if err != nil {
-		context.JSON(http.StatusBadRequest, models.NewESError("Could not parse user", err))
+		context.JSON(http.StatusBadRequest, core.NewESError("Could not parse user", err))
 		return
 	}
 
 	err = h.service.Create(&user)
 	if err != nil {
-		context.JSON(http.StatusInternalServerError, models.NewESError("Could not save user", err))
+		context.JSON(http.StatusInternalServerError, core.NewESError("Could not save user", err))
 		return
 	}
 
@@ -37,22 +39,22 @@ func (h *AuthHandler) SignupHandler(context *gin.Context) {
 }
 
 func (h *AuthHandler) LoginHandler(context *gin.Context) {
-	var loginRequest models.LoginRequest
+	var loginRequest requests.LoginRequest
 	err := context.ShouldBindJSON(&loginRequest)
 	if err != nil {
-		context.JSON(http.StatusBadRequest, models.NewESError("Could not parse user", err))
+		context.JSON(http.StatusBadRequest, core.NewESError("Could not parse user", err))
 		return
 	}
 
 	err = h.service.ValidateCredintials(&loginRequest)
 	if err != nil {
-		context.JSON(http.StatusUnauthorized, models.NewESError("Cannot verify identity", err))
+		context.JSON(http.StatusUnauthorized, core.NewESError("Cannot verify identity", err))
 		return
 	}
 
 	token, err := utils.GernerateToken(loginRequest.Phone, loginRequest.ID)
 	if err != nil {
-		context.JSON(http.StatusInternalServerError, models.NewESError("Cannot create token", err))
+		context.JSON(http.StatusInternalServerError, core.NewESError("Cannot create token", err))
 		return
 	}
 
@@ -63,5 +65,5 @@ func (h *AuthHandler) LoginHandler(context *gin.Context) {
 }
 
 func (h *AuthHandler) LogoutHandler(context *gin.Context) {
-	context.JSON(http.StatusNotExtended, models.NewESError("Not implemented", nil))
+	context.JSON(http.StatusNotExtended, core.NewESError("Not implemented", nil))
 }

@@ -1,224 +1,200 @@
 package repository
 
 import (
-	"database/sql"
 	"fmt"
-	"log"
-	"strings"
 
 	"github.com/wmfadel/wander-base/internal/models"
+	"github.com/wmfadel/wander-base/internal/models/requests"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type EventRepository struct {
-	db        *sql.DB
+	db        *gorm.DB
 	photoRepo *EventPhotoRepository
 }
 
-func NewEventRepository(db *sql.DB, photoRepo *EventPhotoRepository) *EventRepository {
+func NewEventRepository(db *gorm.DB, photoRepo *EventPhotoRepository) *EventRepository {
 	return &EventRepository{db: db, photoRepo: photoRepo}
 }
 
 func (repo *EventRepository) Save(event *models.Event) error {
-	query := `INSERT INTO events(name, description, location, dateTime, user_id)
-    VALUES ($1,$2,$3,$4,$5) RETURNING id`
-	stmt, err := repo.db.Prepare(query)
-	if err != nil {
-		return err
+	if event == nil {
+		return fmt.Errorf("event is nil")
 	}
-	defer stmt.Close()
+	if event.IsEmpty() {
+		return fmt.Errorf("event is empty")
+	}
+	result := repo.db.Create(event)
+	if result.Error != nil {
+		return result.Error
+	}
 
-	var eventId int64
-	err = stmt.QueryRow(event.Name, event.Description, event.Location, event.DateTime, event.UserID).Scan(&eventId)
-	if err != nil {
-		return fmt.Errorf("save event failed to insert: %w", err)
-	}
-	event.ID = eventId
-	log.Printf("Created event %v", event)
+	repo.db.Last(&event)
 	return nil
 }
 
+func (repo *EventRepository) SetDestinations(destinations []models.EventDestinationRequest, eventID int64) error {
+	return repo.db.Transaction(func(tx *gorm.DB) error {
+		// Prepare new event_destination records
+		var eventDestinations []models.EventDestination
+		for _, req := range destinations {
+			eventDestinations = append(eventDestinations, models.EventDestination{
+				EventID:       eventID,
+				DestinationID: req.DestinationID,
+				DateTime:      req.DateTime,
+			})
+		}
+
+		// Insert new destinations, ignoring duplicates
+		if len(eventDestinations) > 0 {
+			err := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&eventDestinations).Error
+			if err != nil {
+				return fmt.Errorf("failed to append destinations to event %d: %w", eventID, err)
+			}
+		}
+
+		return nil
+	})
+}
+
+func (repo *EventRepository) RemoveDestinations(destinationIDs []int64, eventID int64) error {
+	return repo.db.Transaction(func(tx *gorm.DB) error {
+		// Remove specified destinations for the event
+		result := tx.Where("event_id = ? AND destination_id IN ?", eventID, destinationIDs).
+			Delete(&models.EventDestination{})
+		if result.Error != nil {
+			return fmt.Errorf("failed to remove destinations from event %d: %w", eventID, result.Error)
+		}
+
+		// Optional: Check if any rows were affected (not strictly necessary unless you want to fail on no-op)
+		if result.RowsAffected == 0 {
+			return fmt.Errorf("no destinations removed for event %d (none matched the provided IDs)", eventID)
+		}
+
+		return nil
+	})
+}
+
+func (repo *EventRepository) AddActivities(activityIDs []int64, eventID int64) error {
+	return repo.db.Transaction(func(tx *gorm.DB) error {
+		// Prepare new event_activities records
+		var eventActivities []models.EventActivities
+		for _, activityID := range activityIDs {
+			eventActivities = append(eventActivities, models.EventActivities{
+				EventID:    eventID,
+				ActivityID: activityID,
+			})
+		}
+
+		// Insert new activities, ignoring duplicates
+		if len(eventActivities) > 0 {
+			err := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&eventActivities).Error
+			if err != nil {
+				return fmt.Errorf("failed to add activities to event %d: %w", eventID, err)
+			}
+		}
+
+		return nil
+	})
+}
+
+func (repo *EventRepository) RemoveActivities(activityIDs []int64, eventID int64) error {
+	return repo.db.Transaction(func(tx *gorm.DB) error {
+		// Remove specified activities for the event
+		result := tx.Where("event_id = ? AND activity_id IN ?", eventID, activityIDs).
+			Delete(&models.EventActivities{})
+		if result.Error != nil {
+			return fmt.Errorf("failed to remove activities from event %d: %w", eventID, result.Error)
+		}
+
+		// Optional: Check if any rows were affected
+		if result.RowsAffected == 0 {
+			return fmt.Errorf("no activities removed for event %d (none matched the provided IDs)", eventID)
+		}
+
+		return nil
+	})
+}
+
 func (repo *EventRepository) Update(event *models.Event) error {
-	query := `
-	UPDATE events
-	SET name = $1, description = $2, location = $3, dateTime = $4
-	WHERE id = $5
-	`
-	stmt, err := repo.db.Prepare(query)
-	if err != nil {
-		return fmt.Errorf("Update event failed to prepare update event quer: %w", err)
+
+	result := repo.db.Save(event)
+	if result.Error != nil {
+		return fmt.Errorf("executing update event query failed: %w", result.Error)
 	}
-	defer stmt.Close()
-	_, err = stmt.Exec(event.Name, event.Description, event.Location, event.DateTime, event.ID)
-	if err != nil {
-		return fmt.Errorf("executing update event query failed: %w", err)
-	}
-	return fmt.Errorf("executing update query failed %w", err)
+	return nil
 }
 
 func (repo *EventRepository) Delete(eventId int64) error {
-	query := `DELETE FROM events WHERE id = $1`
-	stmt, err := repo.db.Prepare(query)
-	if err != nil {
-		return fmt.Errorf("preparing event delete query failed %w", err)
-	}
-	defer stmt.Close()
-	_, err = stmt.Exec(eventId)
+	result := repo.db.Delete(&models.Event{}, eventId)
 
-	return fmt.Errorf("executing event delete query failed: %w", err)
+	if result.Error != nil {
+		return fmt.Errorf("failed to delete event %d: %w", eventId, result.Error)
+	}
+
+	return nil
 }
 
 func (repo *EventRepository) GetAllEvents() ([]models.Event, error) {
-	query := "SELECT * FROM events"
-	rows, err := repo.db.Query(query)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query all events: %w", err)
-	}
-	defer rows.Close()
-
 	var events = []models.Event{}
 
-	for rows.Next() {
-		var event models.Event
-		err := rows.Scan(&event.ID, &event.Name, &event.Description, &event.Location, &event.DateTime, &event.UserID)
+	result := repo.db.Find(&events)
 
-		if err != nil {
-			return nil, fmt.Errorf("failed to scan event value: %w", err)
-		}
-		events = append(events, event)
+	if result.Error != nil {
+		return nil, fmt.Errorf("failed to get all events: %w", result.Error)
 	}
 	return events, nil
 }
 
 func (repo *EventRepository) GetEventById(id int64) (*models.Event, error) {
-	query := "SELECT id, name, description, location, dateTime, user_id FROM events WHERE id = $1"
-	event := &models.Event{}
-	err := repo.db.QueryRow(query, id).Scan(&event.ID, &event.Name, &event.Description, &event.Location, &event.DateTime, &event.UserID)
+	var event models.Event
+
+	// Fetch event with associations
+	err := repo.db.
+		Preload("User").             // Load associated User
+		Preload("Destinations").     // Load associated Destinations via event_destinations
+		Preload("Activities").       // Load associated Activities via event_activities
+		Preload("Photos").           // Load associated Photos
+		First(&event, "id = ?", id). // Fetch event by ID
+		Error
+
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("event %d not found", id)
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil // Return nil, nil if event not found
 		}
 		return nil, fmt.Errorf("failed to get event %d: %w", id, err)
 	}
 
-	// Fetch photos
-	photos, err := repo.photoRepo.GetPhotos(id)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get photos for event %d: %w", id, err)
-	}
-	event.Photos = photos
-	return event, nil
+	return &event, nil
 }
 
-func (repo *EventRepository) UpdatePartially(eventId int64, patch models.PatchEvent) error {
-
+func (repo *EventRepository) UpdatePartially(eventID int64, patch requests.PatchEvent) error {
 	if patch.IsEmpty() {
 		return fmt.Errorf("no fields provided for update")
 	}
 
-	query, values, err := repo.buildUpdateQuery(eventId, patch)
-	if err != nil {
-		return err // Already wrapped with context
-	}
-
-	return repo.executeUpdateQuery(query, values)
-}
-
-// BuildUpdateQuery constructs the SQL query and values for the partial update
-func (repo *EventRepository) buildUpdateQuery(id int64, patch models.PatchEvent) (string, []interface{}, error) {
-	var setClauses []string
-	var values []interface{}
-	paramIndex := 1
-
-	// Build SET clauses and values for non-nil fields
+	updates := make(map[string]interface{})
 	if patch.Name != nil {
-		setClauses = append(setClauses, fmt.Sprintf("name = $%d", paramIndex))
-		values = append(values, *patch.Name)
-		paramIndex++
+		updates["name"] = *patch.Name
 	}
 	if patch.Description != nil {
-		setClauses = append(setClauses, fmt.Sprintf("description = $%d", paramIndex))
-		values = append(values, *patch.Description)
-		paramIndex++
+		updates["description"] = *patch.Description
 	}
 	if patch.Location != nil {
-		setClauses = append(setClauses, fmt.Sprintf("location = $%d", paramIndex))
-		values = append(values, *patch.Location)
-		paramIndex++
+		updates["location"] = *patch.Location
 	}
 	if patch.DateTime != nil {
-		setClauses = append(setClauses, fmt.Sprintf("dateTime = $%d", paramIndex))
-		values = append(values, *patch.DateTime)
-		paramIndex++
+		updates["date_time"] = *patch.DateTime
 	}
 
-	if len(setClauses) == 0 {
-		return "", nil, fmt.Errorf("no fields provided for update")
+	result := repo.db.Model(&models.Event{}).Where("id = ?", eventID).Updates(updates)
+	if result.Error != nil {
+		return fmt.Errorf("failed to update event %d: %w", eventID, result.Error)
 	}
-
-	// Construct the query
-	query := "UPDATE events SET " + strings.Join(setClauses, ", ") + " WHERE id = $" + fmt.Sprintf("%d", paramIndex)
-	values = append(values, id)
-
-	return query, values, nil
-}
-
-// ExecuteUpdateQuery executes the provided SQL query with the given values
-func (repo *EventRepository) executeUpdateQuery(query string, values []interface{}) error {
-	stmt, err := repo.db.Prepare(query)
-	if err != nil {
-		return fmt.Errorf("failed to prepare update query: %w", err)
-	}
-	defer stmt.Close()
-
-	result, err := stmt.Exec(values...)
-	if err != nil {
-		return fmt.Errorf("failed to execute update query: %w", err)
-	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("failed to get rows affected: %w", err)
-	}
-	if rowsAffected == 0 {
-		return fmt.Errorf("no event found")
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("no event found with id %d", eventID)
 	}
 
 	return nil
-}
-
-func (repo *EventRepository) Register(userId, eventId int64) error {
-	query := "INSERT INTO registrations (event_id, user_id) VALUES ($1, $2)"
-	stmt, err := repo.db.Prepare(query)
-	if err != nil {
-		return fmt.Errorf("failed to prepare query for event registration: %w", err)
-	}
-	defer stmt.Close()
-
-	result, err := stmt.Exec(eventId, userId)
-	if err != nil {
-		return fmt.Errorf("failed to execute registration query: %w", err)
-	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("failed to check rows affected: %w", err)
-	}
-	if rowsAffected == 0 {
-		return fmt.Errorf("registration failed: no rows affected")
-	}
-	return nil
-}
-
-func (repo *EventRepository) CancelRegister(userId int64, eventId int64) error {
-	query := "DELETE FROM registration WHERE event_id=$1 AND user_id=$2"
-
-	stmt, err := repo.db.Prepare(query)
-
-	if err != nil {
-		return fmt.Errorf("failed to prepare query for event unregistration %w", err)
-	}
-	defer stmt.Close()
-
-	_, err = stmt.Exec(eventId, userId)
-	return fmt.Errorf("failed to prepare query for event unregistration %w", err)
 }

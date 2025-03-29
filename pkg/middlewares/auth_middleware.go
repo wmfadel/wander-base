@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/wmfadel/wander-base/internal/models"
+	"github.com/wmfadel/wander-base/internal/models/core"
 	"github.com/wmfadel/wander-base/internal/service"
 	"github.com/wmfadel/wander-base/pkg/utils"
 )
@@ -33,24 +33,30 @@ func (amw *AuthMiddleware) Authenticate(context *gin.Context) {
 	}
 
 	userId, err := utils.VerifyToken(token)
+	log.Printf("userId from token: %v", userId)
 	if err != nil {
-		context.AbortWithStatusJSON(http.StatusUnauthorized, models.NewESError("Invalid token", err))
+		context.AbortWithStatusJSON(http.StatusUnauthorized, core.NewESError("Invalid token", err))
 		return
 	}
 
 	if userId == 0 {
-		context.AbortWithStatusJSON(http.StatusUnauthorized, models.NewESError("user not found", err))
+		context.AbortWithStatusJSON(http.StatusUnauthorized, core.NewESError("user not found", err))
 		return
 	}
 
 	user, err := amw.userService.GetUserByID(userId)
-
+	log.Printf("user in middleware: %v", user)
 	if err != nil || user == nil {
 		if err.Error() == "user blocked, assign \"user\" role to unblock" {
-			context.AbortWithStatusJSON(http.StatusUnauthorized, models.NewESError("user blocked, assign \"user\" role to unblock", err))
+			context.AbortWithStatusJSON(http.StatusUnauthorized, core.NewESError("user blocked, assign \"user\" role to unblock", err))
 		} else {
-			context.AbortWithStatusJSON(http.StatusUnauthorized, models.NewESError("user not found", err))
+			context.AbortWithStatusJSON(http.StatusUnauthorized, core.NewESError("user not found", err))
 		}
+		return
+	}
+
+	if user.Blocked() {
+		context.AbortWithStatusJSON(http.StatusUnauthorized, core.NewESError("user blocked, assign \"user\" role to unblock", nil))
 		return
 	}
 
@@ -65,7 +71,7 @@ func (amw *AuthMiddleware) RequiresAdmin(context *gin.Context) {
 	user, err := utils.GetUserFromContext(context)
 
 	if err != nil {
-		context.AbortWithStatusJSON(http.StatusBadRequest, models.NewESError("Could not find user", err))
+		context.AbortWithStatusJSON(http.StatusBadRequest, core.NewESError("Could not find user", err))
 		return
 	}
 
@@ -78,7 +84,7 @@ func (amw *AuthMiddleware) RequiresAdmin(context *gin.Context) {
 	}
 
 	if !isAdmin {
-		context.AbortWithStatusJSON(http.StatusUnauthorized, models.NewESError("Unauthorized to create/edit events", nil))
+		context.AbortWithStatusJSON(http.StatusUnauthorized, core.NewESError("Unauthorized to create/edit events", nil))
 		return
 	}
 	context.Next()

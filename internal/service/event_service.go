@@ -2,6 +2,7 @@ package service
 
 import (
 	"github.com/wmfadel/wander-base/internal/models"
+	"github.com/wmfadel/wander-base/internal/models/requests"
 	"github.com/wmfadel/wander-base/internal/repository"
 )
 
@@ -18,6 +19,22 @@ func (s *EventService) CreateEvent(event *models.Event) error {
 	return s.repo.Save(event)
 }
 
+func (s *EventService) SetDestinations(destinations []models.EventDestinationRequest, eventID int64) error {
+	return s.repo.SetDestinations(destinations, eventID)
+}
+
+func (s *EventService) RemoveDestinations(destinationIDs []int64, eventID int64) error {
+	return s.repo.RemoveDestinations(destinationIDs, eventID)
+}
+
+func (s *EventService) AddActivities(activityIDs []int64, eventID int64) error {
+	return s.repo.AddActivities(activityIDs, eventID)
+}
+
+func (s *EventService) RemoveActivities(activityIDs []int64, eventID int64) error {
+	return s.repo.RemoveActivities(activityIDs, eventID)
+}
+
 func (s *EventService) GetEventById(eventId int64) (*models.Event, error) {
 	return s.repo.GetEventById(eventId)
 }
@@ -25,19 +42,11 @@ func (s *EventService) GetEventById(eventId int64) (*models.Event, error) {
 func (s *EventService) GetAllEvents() ([]models.Event, error) {
 	return s.repo.GetAllEvents()
 }
-func (s *EventService) UpdatePartially(eventId int64, patch models.PatchEvent) error {
+func (s *EventService) UpdatePartially(eventId int64, patch requests.PatchEvent) error {
 	return s.repo.UpdatePartially(eventId, patch)
 }
 
 func (s *EventService) Delete(eventId int64, photos []string) error {
 	go s.photoService.DeletEventPhotos(eventId, photos)
 	return s.repo.Delete(eventId)
-}
-
-func (s *EventService) Register(userId int64, eventId int64) error {
-	return s.repo.Register(userId, eventId)
-}
-
-func (s *EventService) CancelRegister(userId int64, eventId int64) error {
-	return s.repo.Register(userId, eventId)
 }

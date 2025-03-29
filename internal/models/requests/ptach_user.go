@@ -1,4 +1,6 @@
-package models
+package requests
+
+import "github.com/wmfadel/wander-base/internal/models"
 
 type PatchUser struct {
 	FirstName *string `json:"first_name"`
@@ -12,7 +14,7 @@ func (pu PatchUser) IsEmpty() bool {
 	return false
 }
 
-func (pu *PatchUser) Apply(user *User) {
+func (pu *PatchUser) Apply(user *models.User) {
 	if pu.FirstName != nil {
 		user.FirstName = *pu.FirstName
 	}

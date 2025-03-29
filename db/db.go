@@ -1,19 +1,21 @@
 package db
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
+	"os"
+	"time"
 
-	"github.com/golang-migrate/migrate/v4"
-	"github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/lib/pq"
+	"github.com/wmfadel/wander-base/internal/models"
 	"github.com/wmfadel/wander-base/pkg/utils"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
-func InitDB(migrate, seed bool) *sql.DB {
-	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=require",
+func InitDB(migrate, seed bool) *gorm.DB {
+	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=require",
 		utils.GetFromEnv("DB_HOST"),
 		utils.GetFromEnv("DB_PORT"),
 		utils.GetFromEnv("DB_USER"),
@@ -21,88 +23,107 @@ func InitDB(migrate, seed bool) *sql.DB {
 		utils.GetFromEnv("DB_NAME"),
 	)
 
-	db, err := sql.Open("postgres", psqlInfo)
+	newLogger := logger.New(
+		log.New(os.Stdout, "\r\n", log.LstdFlags),
+		logger.Config{
+			SlowThreshold:             time.Second,
+			LogLevel:                  logger.Silent,
+			IgnoreRecordNotFoundError: true,
+			ParameterizedQueries:      true,
+			Colorful:                  true,
+		},
+	)
+
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+		Logger: newLogger,
+	})
 	if err != nil {
-		log.Fatalf("Error opening database: %v", err)
+		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	err = db.Ping()
+	// Set connection pool settings
+	sqlDB, err := db.DB()
 	if err != nil {
-		db.Close()
-		log.Fatalf("Error pinging database: %v", err)
+		log.Fatalf("Failed to get sql.DB: %v", err)
 	}
+	sqlDB.SetMaxOpenConns(10)
+	sqlDB.SetMaxIdleConns(5)
 
-	db.SetMaxOpenConns(10)
-	db.SetMaxIdleConns(5)
-
-	// Run migrations
 	if migrate {
-		if err := runMigrations(db); err != nil {
-			log.Fatalf("Failed to run migrations: %v", err)
+		// Create the registration_status ENUM type
+		err = db.Exec(`CREATE TYPE registration_status AS ENUM (
+			'registered',
+			'pending_registration',
+			'cancelled',
+			'pending_cancellation'
+		)`).Error
+		if err != nil && !isAlreadyExistsError(err) {
+			log.Fatalf("Failed to create registration_status ENUM: %v", err)
 		}
+
+		// Auto-migrate tables
+		err = db.AutoMigrate(
+			&models.User{},
+			&models.Role{},
+			&models.UserRole{},
+			&models.Event{},
+			&models.Destination{},
+			&models.EventDestination{},
+			&models.Activity{},
+			&models.EventActivities{},
+			&models.EventPhoto{},
+			&models.Registration{},
+		)
+		if err != nil {
+			log.Fatalf("Failed to auto-migrate: %v", err)
+		}
+		log.Println("Database migrated")
 	}
 
-	// Seed data if necessary
 	if seed {
-		if err := seedData(db); err != nil {
-			log.Fatalf("Failed to seed data: %v", err)
+		// Seed roles
+		if err := seedRoles(db); err != nil {
+			log.Fatalf("Failed to seed roles: %v", err)
 		}
+		log.Println("Roles seeded successfully")
 	}
+
 	log.Println("Database Connected...")
 	return db
 }
 
-func runMigrations(db *sql.DB) error {
-	driver, err := postgres.WithInstance(db, &postgres.Config{})
-	if err != nil {
-		return fmt.Errorf("failed to create migration driver: %w", err)
+// Helper to check if error is due to type already existing
+func isAlreadyExistsError(err error) bool {
+	if pqErr, ok := err.(*pq.Error); ok {
+		return pqErr.Code == "42710" // PostgreSQL "duplicate_object" error code
 	}
-
-	m, err := migrate.NewWithDatabaseInstance(
-		"file://migrations", // Path to migration files
-		"postgres",
-		driver,
-	)
-	if err != nil {
-		return fmt.Errorf("failed to create migration instance: %w", err)
-	}
-
-	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-		return fmt.Errorf("failed to apply migrations: %w", err)
-	}
-
-	log.Println("Migrations applied successfully")
-	return nil
+	return false
 }
 
-func seedData(db *sql.DB) error {
-	// Check if roles table is empty
-	var count int
-	err := db.QueryRow("SELECT COUNT(*) FROM roles").Scan(&count)
-	if err != nil {
-		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "42P01" { // Table doesn't exist
-			count = 0
-		} else {
-			return fmt.Errorf("failed to check roles table: %w", err)
-		}
+// seedRoles seeds the roles table with predefined roles
+func seedRoles(db *gorm.DB) error {
+	roles := []models.Role{
+		{Name: "admin", Description: "Admin role", Default: false},
+		{Name: "organizer", Description: "Organizer role", Default: false},
+		{Name: "photographer", Description: "Photographer role", Default: false},
+		{Name: "user", Description: "User role", Default: true},
 	}
 
-	if count == 0 {
-		seedQueries := []string{
-			`INSERT INTO roles (name, description, default_role) VALUES ('admin', 'Admin role', FALSE) ON CONFLICT (name) DO NOTHING`,
-			`INSERT INTO roles (name, description, default_role) VALUES ('organizer', 'Organizer role', FALSE) ON CONFLICT (name) DO NOTHING`,
-			`INSERT INTO roles (name, description, default_role) VALUES ('photographer', 'Photographer role', FALSE) ON CONFLICT (name) DO NOTHING`,
-			`INSERT INTO roles (name, description, default_role) VALUES ('user', 'User role', TRUE) ON CONFLICT (name) DO NOTHING`,
-		}
-
-		for _, query := range seedQueries {
-			if _, err := db.Exec(query); err != nil {
-				return fmt.Errorf("failed to seed data: %w", err)
+	for _, role := range roles {
+		// Check if role already exists by name (unique constraint)
+		var existingRole models.Role
+		err := db.Where("name = ?", role.Name).First(&existingRole).Error
+		if err == gorm.ErrRecordNotFound {
+			// Role doesn’t exist, create it
+			if err := db.Create(&role).Error; err != nil {
+				return fmt.Errorf("failed to create role %s: %w", role.Name, err)
 			}
+		} else if err != nil {
+			// Unexpected error
+			return fmt.Errorf("failed to check existing role %s: %w", role.Name, err)
 		}
-		log.Println("Seed data inserted")
-	} else {
-		log.Println("Seed data already exists")
+		// If role exists, do nothing (mimics ON CONFLICT DO NOTHING)
 	}
+
 	return nil
 }

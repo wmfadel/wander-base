@@ -1,4 +1,4 @@
-package models
+package requests
 
 type LoginRequest struct {
 	ID       int64  `json:"id"`
