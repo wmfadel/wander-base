@@ -152,7 +152,6 @@ func (repo *EventRepository) GetEventById(id int64) (*models.Event, error) {
 
 	// Fetch event with associations
 	err := repo.db.
-		Preload("User").             // Load associated User
 		Preload("Destinations").     // Load associated Destinations via event_destinations
 		Preload("Activities").       // Load associated Activities via event_activities
 		Preload("Photos").           // Load associated Photos

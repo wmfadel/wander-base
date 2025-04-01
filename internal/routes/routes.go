@@ -10,4 +10,6 @@ func RegisterRoutes(server *gin.Engine, c di.DIContainer) {
 	RegisterAdminRoutes(server, c)
 	RegisterProfileRoutes(server, c)
 	RegisterEventRoutes(server, c)
+	RegisterActivityRoutes(server, c)
+	RegisterDestinationRoutes(server, c)
 }
