@@ -20,6 +20,8 @@ type DIContainer struct {
 	RolesService        *service.RoleService
 	EventPhotosService  *service.EventPhotoService
 	RegistrationService *service.RegistrationService
+	ActivityService     *service.ActivityService
+	DestinationService  *service.DestinationService
 
 	// Handlers
 	AuthHandler         *handlers.AuthHandler
@@ -27,6 +29,8 @@ type DIContainer struct {
 	ProfileHandler      *handlers.ProfileHandler
 	EventHandler        *handlers.EventHandler
 	RegistrationHandler *handlers.RegistrationHandler
+	ActivityHandler     *handlers.ActivityHandler
+	DestinationHandler  *handlers.DestinationHandler
 
 	// Middlewares
 	AuthMiddleware *middleware.AuthMiddleware
@@ -41,12 +45,16 @@ func NewDependencies(db *gorm.DB) *DIContainer {
 	userRepo := repository.NewUserRepository(db, storage)
 	rolesRepo := repository.NewRoleRepository(db)
 	registrationRepo := repository.NewRegistrationRepository(db)
+	activityRepo := repository.NewActivityRepository(db)
+	destinationRepo := repository.NewDestinationRepository(db)
 	// Services initialization
 	eventPhotosService := service.NewEventPhotoService(eventPhotosRepository)
 	eventService := service.NewEventService(eventRepo, eventPhotosService)
 	userService := service.NewUserService(userRepo, rolesRepo)
 	rolesService := service.NewRoleService(rolesRepo)
 	registrationService := service.NewRegistrationService(registrationRepo)
+	activityService := service.NewActivityService(activityRepo)
+	destinationService := service.NewDestinationService(destinationRepo)
 	// Handlers initialization
 
 	authHandler := handlers.NewAuthHandler(userService)
@@ -54,6 +62,8 @@ func NewDependencies(db *gorm.DB) *DIContainer {
 	profileHandler := handlers.NewProfileHandler(userService)
 	eventHandler := handlers.NewEventHandler(eventService, eventPhotosService)
 	registrationHandler := handlers.NewRegistrationHandler(registrationService)
+	activityHandler := handlers.NewActivityHandler(activityService)
+	destinationHandler := handlers.NewDestinationHandler(destinationService)
 
 	// Middlewares initialization
 	authMiddleware := middleware.NewAuthMiddleware(userService, eventService)
@@ -68,12 +78,16 @@ func NewDependencies(db *gorm.DB) *DIContainer {
 		UserService:         userService,
 		RolesService:        rolesService,
 		RegistrationService: registrationService,
+		ActivityService:     activityService,
+		DestinationService:  destinationService,
 		// Handlers
 		AuthHandler:         authHandler,
 		AdminHandler:        adminHandler,
 		ProfileHandler:      profileHandler,
 		EventHandler:        eventHandler,
 		RegistrationHandler: registrationHandler,
+		ActivityHandler:     activityHandler,
+		DestinationHandler:  destinationHandler,
 		// Middlewares
 		AuthMiddleware: authMiddleware,
 	}
