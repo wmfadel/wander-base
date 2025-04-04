@@ -24,4 +24,8 @@ func RegisterEventRoutes(r *gin.Engine, c di.DIContainer) {
 	// Registration routes (authentication only)
 	guarded.POST("/events/:id/register", c.RegistrationHandler.RegisterForEvent)
 	guarded.DELETE("/events/:id/register", c.RegistrationHandler.CancelRegistrationEvent)
+
+	// Comments
+	guarded.GET("/events/:id/comments", c.CommentHandler.GetEventComments)
+	guarded.POST("/events/:id/comments", c.CommentHandler.Create)
 }

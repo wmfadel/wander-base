@@ -1,6 +1,9 @@
 package di
 
 import (
+	"log"
+
+	"github.com/sashabaranov/go-openai"
 	"github.com/wmfadel/wander-base/internal/handlers"
 	"github.com/wmfadel/wander-base/internal/repository"
 	"github.com/wmfadel/wander-base/internal/service"
@@ -22,6 +25,7 @@ type DIContainer struct {
 	RegistrationService *service.RegistrationService
 	ActivityService     *service.ActivityService
 	DestinationService  *service.DestinationService
+	CommentService      *service.CommentService
 
 	// Handlers
 	AuthHandler         *handlers.AuthHandler
@@ -31,6 +35,7 @@ type DIContainer struct {
 	RegistrationHandler *handlers.RegistrationHandler
 	ActivityHandler     *handlers.ActivityHandler
 	DestinationHandler  *handlers.DestinationHandler
+	CommentHandler      *handlers.CommentHandler
 
 	// Middlewares
 	AuthMiddleware *middleware.AuthMiddleware
@@ -38,6 +43,9 @@ type DIContainer struct {
 
 // NewDependencies initializes the dependency container
 func NewDependencies(db *gorm.DB) *DIContainer {
+	key := utils.GetFromEnv("OPENAI_API_KEY")
+	log.Print("key: ", key)
+	openaiClient := openai.NewClient(key)
 	storage := utils.NewStorage("http://localhost:8080")
 	// Repositories initialization
 	eventPhotosRepository := repository.NewEventPhotoRepository(db, storage)
@@ -47,6 +55,7 @@ func NewDependencies(db *gorm.DB) *DIContainer {
 	registrationRepo := repository.NewRegistrationRepository(db)
 	activityRepo := repository.NewActivityRepository(db)
 	destinationRepo := repository.NewDestinationRepository(db)
+	commentRepository := repository.NewCommentRepository(db)
 	// Services initialization
 	eventPhotosService := service.NewEventPhotoService(eventPhotosRepository)
 	eventService := service.NewEventService(eventRepo, eventPhotosService)
@@ -55,6 +64,8 @@ func NewDependencies(db *gorm.DB) *DIContainer {
 	registrationService := service.NewRegistrationService(registrationRepo)
 	activityService := service.NewActivityService(activityRepo)
 	destinationService := service.NewDestinationService(destinationRepo)
+	auditService := service.NewAuditService(openaiClient, 0.7)
+	commentService := service.NewCommentService(commentRepository, auditService)
 	// Handlers initialization
 
 	authHandler := handlers.NewAuthHandler(userService)
@@ -64,7 +75,7 @@ func NewDependencies(db *gorm.DB) *DIContainer {
 	registrationHandler := handlers.NewRegistrationHandler(registrationService)
 	activityHandler := handlers.NewActivityHandler(activityService)
 	destinationHandler := handlers.NewDestinationHandler(destinationService)
-
+	commentHandler := handlers.NewCommentHandler(commentService)
 	// Middlewares initialization
 	authMiddleware := middleware.NewAuthMiddleware(userService, eventService)
 
@@ -80,6 +91,7 @@ func NewDependencies(db *gorm.DB) *DIContainer {
 		RegistrationService: registrationService,
 		ActivityService:     activityService,
 		DestinationService:  destinationService,
+		CommentService:      commentService,
 		// Handlers
 		AuthHandler:         authHandler,
 		AdminHandler:        adminHandler,
@@ -88,6 +100,7 @@ func NewDependencies(db *gorm.DB) *DIContainer {
 		RegistrationHandler: registrationHandler,
 		ActivityHandler:     activityHandler,
 		DestinationHandler:  destinationHandler,
+		CommentHandler:      commentHandler,
 		// Middlewares
 		AuthMiddleware: authMiddleware,
 	}

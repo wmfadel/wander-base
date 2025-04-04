@@ -73,6 +73,7 @@ func InitDB(migrate, seed bool) *gorm.DB {
 			&models.EventActivities{},
 			&models.EventPhoto{},
 			&models.Registration{},
+			&models.Comment{},
 		)
 		if err != nil {
 			log.Fatalf("Failed to auto-migrate: %v", err)
