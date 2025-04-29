@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/sashabaranov/go-openai"
 	"github.com/wmfadel/wander-base/internal/models"
@@ -27,6 +28,7 @@ func (s *ModerationService) AuditComment(comment *models.Comment) error {
 		Input: comment.Content,
 		Model: openai.ModerationTextStable,
 	})
+	log.Println(resp)
 	if err != nil {
 		return fmt.Errorf("failed to call OpenAI moderation API: %w", err)
 	}
