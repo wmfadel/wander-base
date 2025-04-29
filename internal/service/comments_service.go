@@ -1,8 +1,6 @@
 package service
 
 import (
-	"fmt"
-
 	"github.com/wmfadel/wander-base/internal/models"
 	"github.com/wmfadel/wander-base/internal/repository"
 )
@@ -20,9 +18,10 @@ func NewCommentService(repo *repository.CommentRepository, auditService *Moderat
 }
 
 func (service *CommentService) Create(comment *models.Comment) error {
-	if err := service.auditService.AuditComment(comment); err != nil {
-		return fmt.Errorf("failed to audit comment: %w", err)
-	}
+	// TODO: Uncomment this when we have a moderation service
+	// if err := service.auditService.AuditComment(comment); err != nil {
+	// 	return fmt.Errorf("failed to audit comment: %w", err)
+	// }
 	return service.repo.Create(comment)
 }
 
