@@ -35,3 +35,18 @@ func GetEventFromContext(context *gin.Context) (*models.Event, error) {
 
 	return &event, nil
 }
+
+func GetUserIdFromContext(context *gin.Context) (int64, error) {
+	value, exists := context.Get("userId")
+	if !exists {
+		return 0, fmt.Errorf("user id not found in context")
+	}
+
+	// Type assert the value to int64
+	userId, ok := value.(int64)
+	if !ok {
+		return 0, fmt.Errorf("invalid user id data in context %v", value)
+	}
+
+	return userId, nil
+}

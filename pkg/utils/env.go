@@ -9,7 +9,7 @@ import (
 
 func LoadEnv() error {
 	if err := godotenv.Load(); err != nil {
-		return fmt.Errorf("failed toload environment variables %w", err)
+		return fmt.Errorf("failed to load environment variables %w", err)
 	}
 	return nil
 }

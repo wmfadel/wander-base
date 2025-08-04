@@ -43,7 +43,7 @@ type DIContainer struct {
 
 // NewDependencies initializes the dependency container
 func NewDependencies(db *gorm.DB) *DIContainer {
-	key := utils.GetFromEnv("OPENAI_API_KEY")
+	key := utils.GetFromEnv("OPENAI_API_PAID_KEY")
 	log.Print("key: ", key)
 	openaiClient := openai.NewClient(key)
 	storage := utils.NewStorage("http://localhost:8080")
